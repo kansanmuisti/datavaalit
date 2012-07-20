@@ -1,0 +1,11 @@
+*~
+*.pyc
+*.pyo
+*.mo
+web/dev.db
+web/settings_local.py
+web/local_settings.py
+web/media/cache
+web/media/images
+web/media/tmp
+web/static/cache
