@@ -1,43 +1,60 @@
 {% extends "banner_base.html" %}
 
 {% load i18n %}
+{% load static from staticfiles %}
 {% load ifsetting_tag %}
 
-{% block head_title %}{% trans "Welcome" %}{% endblock %}
+{% block head_title %}{% trans "Front page" %}{% endblock %}
 
 {% block body_class %}home{% endblock %}
 
-{% block banner %}
-    <h1>{% trans "Welcome to Pinax" %}</h1>
-    <p>
-        {% blocktrans %}
-        <b>Pinax</b> is a <a href="http://djangoproject.com/">Django</a>
-        project intended to provide a starting point for websites. By
-        integrating numerous reusable Django apps to take care of the
-        things that many sites have in common, it lets you focus on what
-        makes your site different.
-        {% endblocktrans %}
-    </p>
-    
-    <h2>About Basic Project</h2>
-    <p>
-        {% blocktrans %}
-        This project takes the account_project and adds profiles and notifications.
-        It is a foundation suitable for many sites that have user accounts with
-        profiles.
-        {% endblocktrans %}
-    </p>
-    
-    {% if user.is_authenticated %}
-        {% url what_next as what_next_url %}
-        <p class="what_next">{% blocktrans %}Wondering <a href="{{ what_next_url }}" class="btn primary large">What Next</a>?{% endblocktrans %}</p>
-    {% else %}
-        {% url acct_login as login_url %}
-        {% ifsetting ACCOUNT_OPEN_SIGNUP %}
-            {% url acct_signup as signup_url %}
-            <p>{% blocktrans %}You can <a href="{{ login_url }}" class="btn">Log In</a> or <a href="{{ signup_url }}" class="btn primary">Sign Up</a> to try out the site.{% endblocktrans %}</p>
-        {% else %}
-            <p>{% blocktrans %}You can <a href="{{ login_url }}" class="btn primary large">Log In</a> to try out the site.{% endblocktrans %}</p>
-        {% endifsetting %}
-    {% endif %}
+{% block body_base %}
+    <div class="container">
+        <div class="hero-unit">
+            <p><b>Datavaalit</b> on pysyvä ja ajan myötä karttuva vaaleihin ja vaalien väliseen
+            keskusteluun liittyvien avoimien tietovarantojen kokoelma. Lisäksi sivusto
+            linkittää avoimen demokratian sovelluskehittäjä ja datajournalisteja yhteen
+            verkostoksi.</p>
+           <h2>Mitä tähän?</h2>
+           <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula. Donec ut orci ante, at gravida sapien. Nam leo mi, facilisis id dignissim in, venenatis sed ligula. Nullam eleifend tortor eu enim commodo ut lacinia urna molestie. Integer feugiat lacus ut enim dignissim quis lobortis lacus ullamcorper. Donec eu quam diam.
+           </p>
+        </div>
+        <div class="row">
+            <div class="span4">
+                <h2>Datan tarjoaja</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula.</p>
+                <p><a class="btn" href="#">Lue lisää &raquo;</a></p>
+            </div>
+            <div class="span4">
+                <h2>Datan hyödyntäjä</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula.</p>
+                <p><a class="btn" href="#">Lue lisää &raquo;</a></p>
+            </div>
+            <div class="span4">
+                <h2>Journalisti</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula.</p>
+                <p><a class="btn" href="#">Lue lisää &raquo;</a></p>
+            </div>
+            <div class="span4">
+                <h2>Tutkija</h2>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula.</p>
+                <p><a class="btn" href="#">Lue lisää &raquo;</a></p>
+            </div>
+        </div>
+        <div class="row" style="margin-top: 50px;">
+            <div class="span3">
+                <a href="http://www.kansanmuisti.fi/"><img src="{% static "images/kamu.png" %}" /></a>
+             </div>
+            <div class="span3">
+                <a href="http://louhos.github.com/sorvi/"><p style='padding-top: 20px; font-size: 46px; color: #181818; font-family: "Droid Serif", "Helvetive Neue", Helvetica"'>sorvi</p></a>
+            </div>
+            <div class="span4">
+                <a href="http://www.sitra.fi/"><img style="padding-top: 15px" src="{% static "images/sitra.jpg" %}" /></a>
+            </div>
+            <div class="span3">
+                <a href="https://www.djangoproject.com/"><img src="{% static "images/django.png" %}" /></a>
+            </div>
+        </div>
+    </div>
 {% endblock %}
+
