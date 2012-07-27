@@ -1,6 +1,6 @@
 {% extends "banner_base.html" %}
 
-{% load i18n %}
+{% load i18n cms_tags %}
 {% load static from staticfiles %}
 {% load ifsetting_tag %}
 
@@ -11,33 +11,46 @@
 {% block body_base %}
     <div class="container">
         <div class="hero-unit">
-            <p><b>Datavaalit</b> on pysyvä ja ajan myötä karttuva vaaleihin ja vaalien väliseen
-            keskusteluun liittyvien avoimien tietovarantojen kokoelma. Lisäksi sivusto
-            linkittää avoimen demokratian sovelluskehittäjä ja datajournalisteja yhteen
-            verkostoksi.</p>
-           <h2>Mitä tähän?</h2>
-           <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula. Donec ut orci ante, at gravida sapien. Nam leo mi, facilisis id dignissim in, venenatis sed ligula. Nullam eleifend tortor eu enim commodo ut lacinia urna molestie. Integer feugiat lacus ut enim dignissim quis lobortis lacus ullamcorper. Donec eu quam diam.
-           </p>
+            <p><b>Datavaalit</b> on pysyvä ja ajan myötä karttuva vaaleihin ja yhteiskunnalliseen päätöksentekoon kytkeytyvien tietovarantojen kokoelma sekä yhteinen nimittäjä avoimen yhteiskunnallisen datan parissa toimiville hankkeille. Sivustolle kertyvä tieto ja yhteistyöverkostot edistävät osallistumista, demokratiaa ja läpinäkyvyyttä edistäen yhteiskunnallista keskustelua vaalien aikana ja niiden välillä. 
+<a href="#">Lue lisää &raquo;</a></p>
         </div>
+        <h2>Kunnallisvaalit 2012</h2>
+        <p style="margin-bottom: 20px">Vaikka julkishallinnon avoimesta datasta puhutaankin Suomessa paljon aina hallitusohjelmaa myöten, etenkin kuntatasolla demokratian ja osallistumisen kannalta keskeisten tietovarantojen avautuminen etenee hitaasti. Syksyn 2012 kunnallisvaalien alla Datavaalit-hanke tukee keskeisten vaaleihin kytkeytyvien tietovarantojen avautumista ja laajaa hyödyntämistä. <a href="#">Lue lisää &raquo;</a></p>
+
         <div class="row">
             <div class="span4">
-                <h2>Datan tarjoaja</h2>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula.</p>
+                <h2>Yhteisö</h2>
+                <p>Datavaalit-hanke tuo yhteen avoimen datan toimijoita luomalla yhteyksiä ja näkyvyyttä sekä tukemalla itsenäisiä hankkeita.</p>
+                <p><a class="btn" href="{% url cms.views.details slug="community" %}">Lue lisää &raquo;</a></p>
+            </div>
+            <div class="span4">
+                <h2>Osallistu</h2>
+                <p>Voit tukea hanketta itsellesi sopivalla tavalla joko myötävaikuttamalla johonkin käynnissä olevaan hankkeeseen tai hyödyntämällä sivuston resursseja itsenäisesti.</p>
                 <p><a class="btn" href="#">Lue lisää &raquo;</a></p>
             </div>
             <div class="span4">
-                <h2>Datan hyödyntäjä</h2>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula.</p>
+                <h2>Data</h2>
+                <p>Datavaalit kokoaa ja jalostaa tietovarantoja, joiden kerääminen yksittäiselle toimitukselle olisi työlästä (esimerkiksi kaikki tällä hetkellä luottamustoimissa eri kuntien lautakunnissa, valtuustoissa yms. toimivat henkilöt).</p>
                 <p><a class="btn" href="#">Lue lisää &raquo;</a></p>
             </div>
             <div class="span4">
-                <h2>Journalisti</h2>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula.</p>
+                <h2>Koodi ja välineet</h2>
+                <p>Lähdekoodia, softaa ja sovelluksia</p>
+		<a href="http://louhos.github.com/sorvi">Suomalainen avoimen datan ohjelmakirjasto R-kielelle (sorvi)</a>
                 <p><a class="btn" href="#">Lue lisää &raquo;</a></p>
             </div>
             <div class="span4">
-                <h2>Tutkija</h2>
-                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum ultrices pharetra ligula.</p>
+                <h2>Muu materiaali</h2>
+                <p>Muu materiaali.</p>
+                <ul>
+	            <li>Esitelmäkalvot
+	            <li>Oppimateriaali
+                    <li><a href="http://datajournalismi.fi/datavaali-2012">Mindmap</a>
+                    <li><a href="http://bit.ly/datavaalit">Ehdotus- ja keskusteludokumentti</a>
+                    <li><a href="http://www.sitra.fi/hankkeet/datavaalit2012">Ehdotus Sitran "Uusi demokratia"-foorumille</a>
+                    <li><a href="http://datajournalismi.fi/pages/datavaalit-2012">Datavaalit 2012</a>
+                    <li><a href="doc/Sitrahankekuvaus.pdf">Hankesuunnitelma</a>
+	     </ul>
                 <p><a class="btn" href="#">Lue lisää &raquo;</a></p>
             </div>
         </div>
@@ -48,13 +61,18 @@
             <div class="span2">
                 <a href="http://louhos.github.com/sorvi/"><p style='padding-top: 20px; font-size: 46px; color: #181818; font-family: "Droid Serif", "Helvetive Neue", Helvetica"'>sorvi</p></a>
             </div>
-            <div class="span3">
+            <div class="span2">
                 <a href="http://www.sitra.fi/"><img style="padding-top: 15px" src="{% static "images/sitra.jpg" %}" /></a>
             </div>
+            <div class="span3">
+                <a href="http://www.otavamedia.fi/"><img src="{% static "images/otavamedia.jpg" %}" /></a>
+            </div>
+        </div>
+	<!-- <div class="row" style="margin-top: 50px">
             <div class="span2">
                 <a href="https://www.djangoproject.com/"><img src="{% static "images/django.png" %}" /></a>
             </div>
-        </div>
+        </div> -->
     </div>
 {% endblock %}
 

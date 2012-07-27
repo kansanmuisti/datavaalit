@@ -1,0 +1,2 @@
+python-imaging
+libpq-dev postgresql

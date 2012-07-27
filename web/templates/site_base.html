@@ -1,24 +1,96 @@
-{% extends "theme_bootstrap/base.html" %}
-
-{% load metron_tags %}
+{% load staticfiles compress %}
+{% load url from future %}
 {% load i18n %}
+{% load sekizai_tags %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+    <head>
+        <meta charset="utf-8" />
+        <title>{% block head_title_base %}{% if SITE_NAME %}{{ SITE_NAME }} | {% endif %}{% block head_title %}{% endblock %}{% endblock %}</title>
+        {% block viewport %}
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        {% endblock %}
 
-{% block nav %}
-    <ul class="nav">{% spaceless %}
-      <li id="tab_links"><a href="#">Projektit</a></li>
-      <li id="tab_links"><a href="#">Wiki</a></li>
-    {% if user.is_authenticated %}
-            <li id="tab_profile"><a href="{% url profile_detail user.username %}">{% trans "Profile" %}</a></li>
-            <li id="tab_notices"><a href="{% url notification_notices %}">{% trans "Notices" %}{% if notice_unseen_count %} ({{ notice_unseen_count }}){% endif %}</a></li>
-    {% endif %}
-    {% endspaceless %}</ul>
-{% endblock %}
+        {% block style_base %}
+            <link href="{% static "pinax/css/theme.css" %}" rel="stylesheet">
+            <link href="{% static "bootstrap/css/bootstrap.css" %}" rel="stylesheet">
+            <link href="{% static "bootstrap/css/bootstrap-responsive.css" %}" rel="stylesheet">
+	    {% compress css %}
+            <link rel="stylesheet" type="text/less" href="{% static "css/datavaalit.less" %}">
+	    {% endcompress %}
+            {% block extra_style %}{% endblock %}
+        {% endblock %}
+        {% render_block "css" %}
 
-{% block footer %}
-    {% include "_footer.html" %}
-{% endblock %}
+        <!-- HTML5 shim, for IE6-8 support of HTML elements -->
+        <!--[if lt IE 9]>
+            <script src="https://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+        <![endif]-->
 
-{% block extra_body_base %}
-    {% analytics %}
-    {% block extra_body %}{% endblock %}
-{% endblock %}
+        {% block extra_head_base %}
+            {% block extra_head %}{% endblock %}
+        {% endblock %}
+    </head>
+    <body class="{% block body_class %}{% endblock %}" id="{% block body_id %}{% endblock %}">
+        {% block topbar_base %}
+        <div class="navbar {% block navbar_class %}navbar-fixed-top{% endblock %}"><div class="navbar-inner"><div class="container">
+        {% block topbar %}
+            <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </a>
+            {% block site_brand %}<a class="brand" href="/">{{ SITE_NAME }}</a>{% endblock %}
+            <div class="nav-collapse">
+                <ul class="nav">{% spaceless %}
+                  <li><a href="#">{% trans "Community" %}</a></li>
+                  <li><a href="#">{% trans "Participate" %}</a></li>
+                  <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                      {% trans "Material" %} <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                      <li><a href="#">{% trans "Data" %}</a></li>
+                      <li><a href="#">{% trans "Code and Algorithms" %}</a></li>
+                      <li><a href="#">{% trans "Other material" %}</a></li>
+                    </ul>
+                  </li>
+		{% endspaceless %}</ul>
+		{% include "_account_bar.html" %}
+            </div>
+        {% endblock %}
+        </div></div></div>
+        {% endblock %}
+
+        {% block body_base %}
+            <div class="container">
+                {% include "_messages.html" %}
+                {% block body %}
+                {% endblock %}
+            </div>
+        {% endblock %}
+
+        {% block footer_base %}
+            <div id="footer">
+                <div class="inner">
+                    <div class="container">
+                        {% include "_footer.html" %}
+                    </div>
+                </div>
+            </div>
+        {% endblock %}
+
+        {% block script_base %}
+            <script src="{% block jquery_src %}{% static "pinax/js/jquery.js" %}{% endblock %}"></script>
+            <script src="{% static "bootstrap/js/bootstrap.js" %}"></script>
+            <script src="{% static "pinax/js/theme.js" %}"></script>
+            {% block extra_script %}{% endblock %}
+        {% endblock %}
+        {% render_block "js" %}
+
+        {% block extra_body_base %}
+            {% block extra_body %}{% endblock %}
+        {% endblock %}
+    </body>
+</html>
+

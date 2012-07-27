@@ -1,0 +1,13 @@
+Postgres installation
+=====================
+
+Ubuntu/Debian packages:
+    libpq-dev postgresql-9.1-postgis postgresql postgresql-9.1-contrib
+
+PIP packages:
+    psycopg2 
+
+Shell commands:
+    sudo su postgres
+    createuser -R -S -D -P datavaalit
+    createdb -O datavaalit -E UTF8 datavaalit

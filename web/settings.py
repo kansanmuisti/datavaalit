@@ -48,6 +48,11 @@ TIME_ZONE = "Europe/Helsinki"
 # http://www.i18nguy.com/unicode/language-identifiers.html
 LANGUAGE_CODE = "fi"
 
+LANGUAGES = [
+    ("fi", "Finnish"),
+    ("en", "English"),
+]
+
 SITE_ID = 1
 
 # If you set this to False, Django will make some optimizations so as not
@@ -56,24 +61,23 @@ USE_I18N = True
 
 # Absolute path to the directory that holds media.
 # Example: "/home/media/media.lawrence.com/"
-MEDIA_ROOT = os.path.join(PROJECT_ROOT, "site_media", "media")
+MEDIA_ROOT = os.path.join(PROJECT_ROOT, "media")
 
 # URL that handles the media served from MEDIA_ROOT. Make sure to use a
 # trailing slash if there is a path component (optional in other cases).
 # Examples: "http://media.lawrence.com", "http://example.com/media/"
-MEDIA_URL = "/site_media/media/"
+MEDIA_URL = "/media/"
 
 # Absolute path to the directory that holds static files like app media.
 # Example: "/home/media/media.lawrence.com/apps/"
-STATIC_ROOT = os.path.join(PROJECT_ROOT, "site_media", "static")
+STATIC_ROOT = os.path.join(PROJECT_ROOT, "static")
 
 # URL that handles the static files like app media.
 # Example: "http://media.lawrence.com"
-STATIC_URL = "/site_media/static/"
+STATIC_URL = "/static/"
 
 # Additional directories which hold static files
 STATICFILES_DIRS = [
-    os.path.join(PROJECT_ROOT, "static"),
 ]
 
 STATICFILES_FINDERS = [
@@ -90,14 +94,19 @@ ADMIN_MEDIA_PREFIX = posixpath.join(STATIC_URL, "admin/")
 
 # Subdirectory of COMPRESS_ROOT to store the cached media files in
 COMPRESS_OUTPUT_DIR = "cache"
+COMPRESS_PRECOMPILERS = (
+    ('text/less', 'lessc {infile} {outfile}'),
+    ('text/coffeescript', 'coffee --compile --stdio'),
+)
+COMPRESS_JS_FILTERS = []
 
 # Make this unique, and don't share it with anybody.
 SECRET_KEY = "v=zgs%frykqn#yquja80#y6=*gr)zex4l$e*joghnb3ephyd96"
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = [
-    "django.template.loaders.filesystem.load_template_source",
-    "django.template.loaders.app_directories.load_template_source",
+    "django.template.loaders.filesystem.Loader",
+    "django.template.loaders.app_directories.Loader",
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -105,11 +114,14 @@ MIDDLEWARE_CLASSES = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django_openid.consumer.SessionConsumer",
     "django.contrib.messages.middleware.MessageMiddleware",
     "pagination.middleware.PaginationMiddleware",
     "pinax.middleware.security.HideSensistiveFieldsMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
+#    "cms.middleware.multilingual.MultilingualURLMiddleware",
+    "cms.middleware.page.CurrentPageMiddleware",
+    "cms.middleware.user.CurrentUserMiddleware",
+    "cms.middleware.toolbar.ToolbarMiddleware",
+#    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 ROOT_URLCONF = "web.urls"
@@ -125,15 +137,14 @@ TEMPLATE_CONTEXT_PROCESSORS = [
     "django.core.context_processors.media",
     "django.core.context_processors.request",
     "django.contrib.messages.context_processors.messages",
-    
     "staticfiles.context_processors.static",
-    
     "pinax.core.context_processors.pinax_settings",
-    
     "pinax.apps.account.context_processors.account",
-    
-    "notification.context_processors.notification",
+    "cms.context_processors.media",
+    "sekizai.context_processors.sekizai",
+#    "notification.context_processors.notification",
     "announcements.context_processors.site_wide_announcements",
+
 ]
 
 INSTALLED_APPS = [
@@ -153,10 +164,10 @@ INSTALLED_APPS = [
     "django_forms_bootstrap",
     
     # external
-    "notification", # must be first
+#    "notification", # must be first
     "staticfiles",
     "compressor",
-    "debug_toolbar",
+#    "debug_toolbar",
     "mailer",
     "django_openid",
     "timezones",
@@ -165,6 +176,20 @@ INSTALLED_APPS = [
     "pagination",
     "idios",
     "metron",
+    "cms",
+    "mptt",
+    "menus",
+    "south",
+    "sekizai",
+    "filer",
+    "reversion",
+    "django.contrib.markup",
+    "wiki",
+    "django_notify",
+
+    "cms.plugins.text",
+    "cms.plugins.teaser",
+    "cmsplugin_markdown",
     
     # Pinax
     "pinax.apps.account",
@@ -202,8 +227,8 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 LOGIN_URL = "/account/login/" # @@@ any way this can be a url name?
-LOGIN_REDIRECT_URLNAME = "what_next"
-LOGOUT_REDIRECT_URLNAME = "home"
+LOGIN_REDIRECT_URLNAME = "pages-root"
+LOGOUT_REDIRECT_URLNAME = "pages-root"
 
 EMAIL_CONFIRMATION_DAYS = 2
 EMAIL_DEBUG = DEBUG
@@ -211,6 +236,10 @@ EMAIL_DEBUG = DEBUG
 DEBUG_TOOLBAR_CONFIG = {
     "INTERCEPT_REDIRECTS": False,
 }
+
+CMS_TEMPLATES = (
+    ('cms/template_base.html', 'Base'),
+)
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

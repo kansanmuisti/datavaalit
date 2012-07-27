@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-07-26 09:05-0400\n"
+"POT-Creation-Date: 2012-07-30 16:45+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -35,40 +35,60 @@ msgid "website"
 msgstr ""
 
 #: templates/_account_bar.html:7
+msgid "Logged in as:"
+msgstr "Käyttäjä"
+
+#: templates/_account_bar.html:18
 msgid "Account"
 msgstr "Tili"
 
-#: templates/_account_bar.html:9
+#: templates/_account_bar.html:20
 msgid "Admin"
 msgstr "Ylläpito"
 
-#: templates/_account_bar.html:12
-msgid "Logout"
+#: templates/_account_bar.html:23
+msgid "Log out"
 msgstr "Kirjaudu ulos"
 
-#: templates/_account_bar.html:16
+#: templates/_account_bar.html:28
 msgid "Log in"
 msgstr "Kirjaudu sisään"
 
-#: templates/_account_bar.html:17
+#: templates/_account_bar.html:30
 msgid "or"
 msgstr "tai"
 
-#: templates/_account_bar.html:18
+#: templates/_account_bar.html:31
 msgid "Sign up"
 msgstr "Rekisteröidy"
 
-#: templates/homepage.html:6
+#: templates/homepage.html:7
 msgid "Front page"
 msgstr "Etusivu"
 
-#: templates/site_base.html:11
-msgid "Profile"
-msgstr "Profiili"
+#: templates/site_base.html:43
+msgid "Community"
+msgstr "Yhteisö"
 
-#: templates/site_base.html:12
-msgid "Notices"
-msgstr "Ilmoitukset"
+#: templates/site_base.html:44
+msgid "Participate"
+msgstr "Osallistu"
+
+#: templates/site_base.html:47
+msgid "Material"
+msgstr "Materiaalit"
+
+#: templates/site_base.html:50
+msgid "Data"
+msgstr "Data"
+
+#: templates/site_base.html:51
+msgid "Code and Algorithms"
+msgstr "Koodi ja välineet"
+
+#: templates/site_base.html:52
+msgid "Other material"
+msgstr "Muu materiaali"
 
 #: templates/profiles/_profile_info.html:3
 msgid "Name"
@@ -85,3 +105,4 @@ msgstr "Sijainti"
 #: templates/profiles/_profile_info.html:6
 msgid "Website"
 msgstr "Kotisivu"
+

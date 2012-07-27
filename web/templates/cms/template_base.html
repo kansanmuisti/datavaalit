@@ -1,0 +1,16 @@
+{% extends "site_base.html" %}
+
+{% load i18n %}
+{% load static from staticfiles %}
+{% load cms_tags %}
+
+{% block head_title %}{% page_attribute "page_title" %}{% endblock %}
+
+{% block body_class %}home{% endblock %}
+
+{% block body_base %}
+    <div class="container">
+      {% placeholder template_1_content %}
+    </div>
+{% endblock %}
+

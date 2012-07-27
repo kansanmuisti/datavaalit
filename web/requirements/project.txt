@@ -5,3 +5,8 @@
 
 # Put project-specific requirements here.
 # See http://pip-installer.org/requirement-format.html for more information.
+
+markdown
+django-filer
+django-reversion
+cmsplugin-filer
