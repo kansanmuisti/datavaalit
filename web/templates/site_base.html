@@ -1,10 +1,10 @@
-{% extends "theme_base.html" %}
+{% extends "theme_bootstrap/base.html" %}
 
 {% load metron_tags %}
 {% load i18n %}
 
 {% block nav %}
-    <ul>{% spaceless %}
+    <ul class="nav">{% spaceless %}
       <li id="tab_links"><a href="#">Projektit</a></li>
       <li id="tab_links"><a href="#">Wiki</a></li>
     {% if user.is_authenticated %}
