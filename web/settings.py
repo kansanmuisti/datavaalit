@@ -184,8 +184,6 @@ INSTALLED_APPS = [
     "filer",
     "reversion",
     "django.contrib.markup",
-    "wiki",
-    "django_notify",
 
     "cms.plugins.text",
     "cms.plugins.teaser",
@@ -206,7 +204,7 @@ FIXTURE_DIRS = [
 
 MESSAGE_STORAGE = "django.contrib.messages.storage.session.SessionStorage"
 
-EMAIL_BACKEND = "mailer.backend.DbBackend"
+#EMAIL_BACKEND = "mailer.backend.DbBackend"
 
 ABSOLUTE_URL_OVERRIDES = {
     "auth.user": lambda o: "/profiles/profile/%s/" % o.username,

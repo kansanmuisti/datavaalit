@@ -9,4 +9,6 @@
 markdown
 django-filer
 django-reversion
+django-cms
 cmsplugin-filer
+cmsplugin-markdown

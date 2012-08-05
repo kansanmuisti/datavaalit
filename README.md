@@ -11,3 +11,10 @@ Shell commands:
     sudo su postgres
     createuser -R -S -D -P datavaalit
     createdb -O datavaalit -E UTF8 datavaalit
+
+Database creation
+=================
+
+Shell commands:
+    ./manage.py syncdb --all
+    ./manage.py migrate --fake

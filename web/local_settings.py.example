@@ -1,8 +1,21 @@
+# -*- coding: utf-8 -*-
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgres',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'datavaalit',
         'USER': 'datavaalit',
         'PASSWORD': 'datavaalit'
     }
 }
+
+#DEBUG = False
+
+#STATIC_ROOT = '/home/datavaalit/beta/static'
+#MEDIA_ROOT = '/home/datavaalit/beta/media'
+#STATICFILES_DIRS.append(os.path.abspath(os.path.dirname(__file__)), 'static')
+
+#ADMINS = [
+    ('First Last', 'first.last@example.com'),
+#]
+#MANAGERS = ADMINS
