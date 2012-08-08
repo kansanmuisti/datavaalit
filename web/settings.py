@@ -196,6 +196,7 @@ INSTALLED_APPS = [
     # project
     "about",
     "profiles",
+    "stats"
 ]
 
 FIXTURE_DIRS = [
