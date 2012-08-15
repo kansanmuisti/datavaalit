@@ -10,7 +10,7 @@ PIP packages:
 Shell commands:
     sudo su postgres
     createuser -R -S -D -P datavaalit
-    createdb -O datavaalit -E UTF8 datavaalit
+    createdb -T template_postgis -O datavaalit -E UTF8 datavaalit
 
 Database creation
 =================

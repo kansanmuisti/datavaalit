@@ -1,2 +1,5 @@
 python-imaging
 libpq-dev postgresql
+python-gdal
+libproj-dev
+postgresql-9.1-postgis

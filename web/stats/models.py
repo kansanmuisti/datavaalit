@@ -1,4 +1,4 @@
-from django.db import models
+from django.contrib.gis.db import models
 
 class Statistic(models.Model):
     name = models.CharField(max_length=50)
@@ -27,6 +27,11 @@ class MunicipalityStat(models.Model):
     class Meta:
         abstract = True
 
+class MunicipalityBoundary(MunicipalityStat):
+    boundary = models.MultiPolygonField()
+
+    objects = models.GeoManager()
+
 class Election(models.Model):
     TYPE_CHOICES = (
         ('pres', 'presidential'),
@@ -37,7 +42,7 @@ class Election(models.Model):
     type = models.CharField(max_length=4, choices=TYPE_CHOICES)
     date = models.DateField()
     year = models.PositiveIntegerField()
-    # Presidential elections have two rounds
+    # Presidential elections can have two rounds
     round = models.PositiveSmallIntegerField()
 
 class VotingPercentage(MunicipalityStat, Datum):

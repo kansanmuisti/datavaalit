@@ -4,11 +4,35 @@ from django.core.management.base import BaseCommand
 from stats.models import *
 from utils.http import HttpFetcher
 from django.conf import settings
+from django.contrib.gis.gdal import DataSource
+from django.contrib.gis.geos import GEOSGeometry
 
 MUNI_URL = "http://tilastokeskus.fi/meta/luokitukset/kunta/001-2012/tekstitiedosto.txt"
 
 class Command(BaseCommand):
     help = "Manage stats app"
+
+    def import_municipality_boundaries(self):
+        path = os.path.join(self.data_path, 'SuomenKuntajako_2012_1000k.xml')
+        ds = DataSource(path)
+        lyr = ds[0]
+        count = 0
+        for feat in lyr:
+            s = feat.get('LocalisedCharacterString')
+            if not 'Kunta,Kommun' in s:
+                continue
+            s = feat.get('text')
+            name = s.split(':')[1].split(',')[0]
+            muni = Municipality.objects.get(name=name)
+            try:
+                mb = MunicipalityBoundary.objects.get(municipality=muni)
+            except MunicipalityBoundary.DoesNotExist:
+                mb = MunicipalityBoundary(municipality=muni)
+                gm = GEOSGeometry(feat.geom.wkb, srid=feat.geom.srid)
+                mb.boundary = gm
+                mb.save()
+
+        print "%d municipality boundaries added." % count
 
     def import_municipalities(self):
         s = self.http.open_url(MUNI_URL, "muni")
@@ -18,6 +42,7 @@ class Command(BaseCommand):
             dec_line = line.decode('iso8859-1').rstrip().split('\t')
             (muni_id, muni_name) = dec_line
             muni_id = int(muni_id)
+            muni_name = muni_name.split(' - ')[0]
 
             try:
                 muni = Municipality.objects.get(id=muni_id)
@@ -25,7 +50,7 @@ class Command(BaseCommand):
                 muni = Municipality(id=muni_id, name=muni_name)
                 muni.save()
                 count += 1
-        print "%d counties added." % count
+        print "%d municipalities added." % count
 
     def import_elections(self):
         f = open(os.path.join(self.data_path, 'elections.txt'))
@@ -86,6 +111,7 @@ class Command(BaseCommand):
         http.set_cache_dir(os.path.join(settings.PROJECT_ROOT, ".cache"))
         self.data_path = os.path.join(settings.PROJECT_ROOT, '..', 'data')
         self.http = http
-        self.import_elections()
         self.import_municipalities()
+        self.import_municipality_boundaries()
+        self.import_elections()
         self.import_election_stats()

@@ -183,7 +183,9 @@ INSTALLED_APPS = [
     "sekizai",
     "filer",
     "reversion",
+    "tastypie",
     "django.contrib.markup",
+    "django.contrib.gis",
 
     "cms.plugins.text",
     "cms.plugins.teaser",
