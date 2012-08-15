@@ -3,14 +3,23 @@ from django.conf.urls.defaults import *
 from django.views.generic.simple import direct_to_template
 from cms.views import details as cms_page
 from django.contrib import admin
+from tastypie.api import Api
+from stats.api import *
+
 admin.autodiscover()
 
 handler500 = "pinax.views.server_error"
+
+v1_api = Api(api_name='v1')
+v1_api.register(MunicipalityResource())
+v1_api.register(VotingPercentageResource())
+v1_api.register(ElectionResource())
 
 urlpatterns = patterns("",
     url(r"^admin/", include(admin.site.urls)),
     url(r"^account/", include("pinax.apps.account.urls")),
     url(r"^profiles/", include("idios.urls")),
+    url(r"^api/", include(v1_api.urls)),
     url(r"", include("cms.urls")),
 )
 

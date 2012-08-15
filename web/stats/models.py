@@ -27,8 +27,13 @@ class MunicipalityStat(models.Model):
     class Meta:
         abstract = True
 
-class MunicipalityBoundary(MunicipalityStat):
-    boundary = models.MultiPolygonField()
+class MunicipalityUniqueStat(models.Model):
+    municipality = models.OneToOneField(Municipality)
+    class Meta:
+        abstract = True
+
+class MunicipalityBoundary(MunicipalityUniqueStat):
+    borders = models.MultiPolygonField()
 
     objects = models.GeoManager()
 

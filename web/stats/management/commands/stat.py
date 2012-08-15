@@ -29,8 +29,9 @@ class Command(BaseCommand):
             except MunicipalityBoundary.DoesNotExist:
                 mb = MunicipalityBoundary(municipality=muni)
                 gm = GEOSGeometry(feat.geom.wkb, srid=feat.geom.srid)
-                mb.boundary = gm
+                mb.borders = gm
                 mb.save()
+                count += 1
 
         print "%d municipality boundaries added." % count
 
