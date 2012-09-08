@@ -20,6 +20,7 @@ urlpatterns = patterns("",
     url(r"^account/", include("pinax.apps.account.urls")),
     url(r"^profiles/", include("idios.urls")),
     url(r"^api/", include(v1_api.urls)),
+    url(r"^data/municipality/$", "stats.views.municipality_border_test"),
     url(r"", include("cms.urls")),
 )
 

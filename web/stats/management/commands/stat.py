@@ -4,15 +4,46 @@ from django.core.management.base import BaseCommand
 from stats.models import *
 from utils.http import HttpFetcher
 from django.conf import settings
-from django.contrib.gis.gdal import DataSource
-from django.contrib.gis.geos import GEOSGeometry
+from django.contrib.gis.gdal import DataSource, SpatialReference, CoordTransform
+from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
+
 
 MUNI_URL = "http://tilastokeskus.fi/meta/luokitukset/kunta/001-2012/tekstitiedosto.txt"
+# http://latuviitta.org/documents/YKJ-TM35FIN_muunnos_ogr2ogr_cs2cs.txt
+
+"""
+def import_election_district_boundaries(self, data_path):
+    path = os.path.join(data_path, 'aan/PKS_aanestysalueet_kkj2.TAB')
+    ds = DataSource(path)
+    kkj2 = SpatialReference('+proj=tmerc +lat_0=0 +lon_0=24 +k=1 +x_0=2500000 +y_0=0 +ellps=intl +towgs84=-96.0617,-82.4278,-121.7535,4.80107,0.34543,-1.37646,1.4964 +units=m +no_defs')
+    kkj2_to_wgs84 = CoordTransform(kkj2, SpatialReference('WGS84'))
+    lyr = ds[0]
+    for feat in lyr:
+        print feat.get('KUNTA')
+        print feat.get('Nimi')
+        feat.geom.srs = kkj2
+        print feat
+        geom = feat.geom
+        geom.transform(kkj2_to_wgs84)
+        print geom
+        exit(1)
+    print feat.fields
+    exit(1)
+"""
 
 class Command(BaseCommand):
     help = "Manage stats app"
 
     def import_municipality_boundaries(self):
+        path = os.path.join(self.data_path, 'TM_WORLD_BORDERS-0.3.shp')
+        ds = DataSource(path)
+        lyr = ds[0]
+        for feat in lyr:
+            if feat.get('ISO2') != 'FI':
+                continue
+            country_borders = feat.geom
+            break
+
         path = os.path.join(self.data_path, 'SuomenKuntajako_2012_1000k.xml')
         ds = DataSource(path)
         lyr = ds[0]
@@ -23,12 +54,24 @@ class Command(BaseCommand):
                 continue
             s = feat.get('text')
             name = s.split(':')[1].split(',')[0]
+            geom = feat.geom
+            geom.transform(4326)
+
+            # Take only the borders of the land mass
+            intersect = geom.intersection(country_borders)
+            # Some islands do not intersect country_borders.
+            # Those we let be.
+            if len(intersect):
+                geom = intersect
+
             muni = Municipality.objects.get(name=name)
             try:
                 mb = MunicipalityBoundary.objects.get(municipality=muni)
             except MunicipalityBoundary.DoesNotExist:
                 mb = MunicipalityBoundary(municipality=muni)
-                gm = GEOSGeometry(feat.geom.wkb, srid=feat.geom.srid)
+                gm = GEOSGeometry(geom.wkb, srid=geom.srid)
+                if not isinstance(gm, MultiPolygon):
+                    gm = MultiPolygon(gm)
                 mb.borders = gm
                 mb.save()
                 count += 1

@@ -18,3 +18,13 @@ Database creation
 Shell commands:
     ./manage.py syncdb --all
     ./manage.py migrate --fake
+
+Populating the database
+=======================
+
+The Finnish geospatial files require a bleeding edge version of python-gdal.
+
+    sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
+    apt-get update
+    apt-get install python-gdal libgdal1
+
