@@ -14,3 +14,5 @@ cmsplugin-filer
 cmsplugin-markdown
 #django-tastypie
 git+https://github.com/toastdriven/django-tastypie.git#egg=tastypie
+requests
+requests-cache

@@ -34,3 +34,11 @@ class VotingPercentageResource(ModelResource):
         resource_name = 'voting_percentage'
         include_resource_uri = False
         excludes = ['id']
+
+class CouncilMemberResource(ModelResource):
+    municipality = fields.ToOneField('stats.api.MunicipalityResource',
+                                     'municipality')
+    election = fields.ToOneField('stats.api.ElectionResource', 'election')
+    class Meta:
+        queryset = CouncilMember.objects.all()
+        resource_name = 'council_member'

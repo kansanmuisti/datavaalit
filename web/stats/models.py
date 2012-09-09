@@ -56,3 +56,9 @@ class VotingPercentage(MunicipalityStat, Datum):
     def __unicode__(self):
         return "%s (%d): %f" % (self.municipality.name, self.election.year,
                                 self.value)
+
+
+class CouncilMember(MunicipalityStat):
+    election = models.ForeignKey(Election)
+    name = models.CharField(max_length=50)
+    party = models.CharField(max_length=10)
