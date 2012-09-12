@@ -1,0 +1,67 @@
+{% extends "site_base.html" %}
+
+{% load i18n static compress %}
+{% load static %}
+
+{% block head_title %}{% trans "Municipality data" %}{% endblock %}
+
+{% block body_class %}data{% endblock %}
+
+{% block extra_style %}
+    <link rel="stylesheet" href="http://dev.openlayers.org/releases/OpenLayers-2.11/theme/default/style.css" type="text/css">
+    <link rel="stylesheet" href="http://dev.openlayers.org/releases/OpenLayers-2.11/examples/style.css" type="text/css">
+{% compress css inline %}
+    <style type="text/less">
+        #map {
+            img {
+                max-width: none !important;
+            }
+        }
+    </style>
+{% endcompress %}
+{% endblock %}
+
+{% block extra_script %}
+<script src="http://openlayers.org/api/OpenLayers.js"></script>
+
+<script type="text/javascript">
+        var lon = 24.962;
+        var lat = 60.187;
+        var zoom = 9;
+        var map, layer;
+	var colors = ["#000066", "#003366", "#006666", "#009966", "#00cc66", "#00ff66"];
+	var color_map = {49: "#816a4a", 91: "#3d3e24", 92: "#bd8025"};
+
+        function init() {
+            map = new OpenLayers.Map('map');
+            layer = new OpenLayers.Layer.WMS("OpenLayers WMS", 
+                    "http://vmap0.tiles.osgeo.org/wms/vmap0",
+                    {layers: 'basic'});
+            map.addLayer(layer);
+            map.setCenter(new OpenLayers.LonLat(lon, lat), zoom);
+            var districts = [{% for d in districts %}
+            	{'id': {{ d.municipality.id }}, 'borders': {{ d.borders.geojson|safe }}},
+            {% endfor %}];
+            var style = new OpenLayers.Style({fillColor: '${color}'});
+            var style_map = new OpenLayers.StyleMap({'default': style});
+            var geojson_format = new OpenLayers.Format.GeoJSON();
+            var vector_layer = new OpenLayers.Layer.Vector("", {styleMap: style_map});
+            map.addLayer(vector_layer);
+            for (var i = 0; i < districts.length; i++) {
+                feat = geojson_format.read(districts[i].borders);
+                feat[0].attributes['color'] = color_map[districts[i].id];
+                vector_layer.addFeatures(feat);
+            }
+        }
+
+	$(function() {
+	    init();
+	});
+</script>
+{% endblock %}
+
+{% block body_base %}
+    <div style="page-header"><h1>Testi</h2></div>
+    <div id="map" class="smallmap"></div>
+{% endblock %}
+

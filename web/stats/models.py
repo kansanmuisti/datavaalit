@@ -2,7 +2,7 @@ from django.contrib.gis.db import models
 
 class Statistic(models.Model):
     name = models.CharField(max_length=50)
-    slug = models.SlugField(db_index=True)
+    slug = models.SlugField(db_index=True, unique=True)
     source = models.CharField(max_length=50)
     source_url = models.URLField(null=True, blank=True)
     fetch_date = models.DateTimeField(auto_now_add=True)
@@ -21,6 +21,9 @@ class Datum(models.Model):
 class Municipality(models.Model):
     id = models.IntegerField(primary_key=True)
     name = models.CharField(max_length=50)
+
+    def __unicode__(self):
+        return self.name
 
 class MunicipalityStat(models.Model):
     municipality = models.ForeignKey(Municipality)
@@ -49,6 +52,15 @@ class Election(models.Model):
     year = models.PositiveIntegerField()
     # Presidential elections can have two rounds
     round = models.PositiveSmallIntegerField()
+
+class ElectionDistrict(MunicipalityStat):
+    election = models.ForeignKey(Election, db_index=True)
+    origin_id = models.CharField(max_length=10)
+    name = models.CharField(max_length=50)
+    borders = models.MultiPolygonField(null=True)
+
+    class Meta:
+        unique_together = (('municipality', 'origin_id'),)
 
 class VotingPercentage(MunicipalityStat, Datum):
     election = models.ForeignKey(Election)

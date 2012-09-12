@@ -22,6 +22,7 @@ urlpatterns = patterns("",
     url(r"^profiles/", include("idios.urls")),
     url(r"^api/", include(v1_api.urls)),
     url(r"^data/municipality/$", "stats.views.municipality_border_test"),
+    url(r"^data/districts/$", "stats.views.district_borders_test"),
     url(r"", include("cms.urls")),
 )
 

@@ -15,3 +15,14 @@ def municipality_border_test(request):
     args = {'borders': borders}
     return render_to_response('municipality.html', args,
                 context_instance=RequestContext(request))
+
+def district_borders_test(request):
+    muni1 = Municipality.objects.get(name='Helsinki')
+    muni2 = Municipality.objects.get(name='Espoo')
+    muni3 = Municipality.objects.get(name='Vantaa')
+    munis = (muni1, muni2, muni3)
+    election = Election.objects.get(type='muni', year=2012)
+    district_list = ElectionDistrict.objects.filter(municipality__in=munis, election=election)
+    args = {'districts': district_list}
+    return render_to_response('districts.html', args,
+                context_instance=RequestContext(request))

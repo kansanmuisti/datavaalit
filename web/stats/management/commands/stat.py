@@ -11,28 +11,37 @@ from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
 MUNI_URL = "http://tilastokeskus.fi/meta/luokitukset/kunta/001-2012/tekstitiedosto.txt"
 # http://latuviitta.org/documents/YKJ-TM35FIN_muunnos_ogr2ogr_cs2cs.txt
 
-"""
-def import_election_district_boundaries(self, data_path):
-    path = os.path.join(data_path, 'aan/PKS_aanestysalueet_kkj2.TAB')
-    ds = DataSource(path)
-    kkj2 = SpatialReference('+proj=tmerc +lat_0=0 +lon_0=24 +k=1 +x_0=2500000 +y_0=0 +ellps=intl +towgs84=-96.0617,-82.4278,-121.7535,4.80107,0.34543,-1.37646,1.4964 +units=m +no_defs')
-    kkj2_to_wgs84 = CoordTransform(kkj2, SpatialReference('WGS84'))
-    lyr = ds[0]
-    for feat in lyr:
-        print feat.get('KUNTA')
-        print feat.get('Nimi')
-        feat.geom.srs = kkj2
-        print feat
-        geom = feat.geom
-        geom.transform(kkj2_to_wgs84)
-        print geom
-        exit(1)
-    print feat.fields
-    exit(1)
-"""
-
 class Command(BaseCommand):
     help = "Manage stats app"
+
+    def import_election_district_boundaries(self):
+        path = os.path.join(self.data_path, 'aan/PKS_aanestysalueet_kkj2.TAB')
+        ds = DataSource(path)
+        kkj2 = SpatialReference('+proj=tmerc +lat_0=0 +lon_0=24 +k=1 +x_0=2500000 +y_0=0 +ellps=intl +towgs84=-96.0617,-82.4278,-121.7535,4.80107,0.34543,-1.37646,1.4964 +units=m +no_defs')
+        kkj2_to_wgs84 = CoordTransform(kkj2, SpatialReference('WGS84'))
+        lyr = ds[0]
+        election = Election.objects.get(type='muni', year=2012)
+        count = 0
+        for feat in lyr:
+            muni_id = int(feat.get('KUNTA'))
+            muni = Municipality.objects.get(id=muni_id)
+            name = feat.get('Nimi').decode('iso8859-1')
+            feat.geom.srs = kkj2
+            geom = feat.geom
+            geom.transform(kkj2_to_wgs84)
+            origin_id = feat.get('TKTUNNUS')
+
+            args = {'municipality': muni, 'origin_id': origin_id, 'election': election}
+            ed, created = ElectionDistrict.objects.get_or_create(**args)
+            ed.name = name
+            gm = GEOSGeometry(geom.wkb, srid=geom.srid)
+            if not isinstance(gm, MultiPolygon):
+                gm = MultiPolygon(gm)
+            ed.borders = gm
+            ed.save()
+            if created:
+                count += 1
+        print "%d election districts added." % count
 
     def import_municipality_boundaries(self):
         path = os.path.join(self.data_path, 'TM_WORLD_BORDERS-0.3.shp')
@@ -75,7 +84,6 @@ class Command(BaseCommand):
                 mb.borders = gm
                 mb.save()
                 count += 1
-
         print "%d municipality boundaries added." % count
 
     def import_municipalities(self):
@@ -126,7 +134,7 @@ class Command(BaseCommand):
             statistic = Statistic.objects.get(slug="presidential-2012-round2")
         except Statistic.DoesNotExist:
             statistic = Statistic(name="Presidentinvaalit 2012 2. kierros",
-                                  slug="presidential-2012-round",
+                                  slug="presidential-2012-round2",
                                   source="Tilastokeskus",
                                   source_url="http://pxweb2.stat.fi/Database/statfin/vaa/pvaa/pvaa_2012/pvaa_2012_fi.asp")
             statistic.save()
@@ -159,3 +167,5 @@ class Command(BaseCommand):
         self.import_municipality_boundaries()
         self.import_elections()
         self.import_election_stats()
+        self.import_election_district_boundaries()
+
