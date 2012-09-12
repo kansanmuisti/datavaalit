@@ -43,7 +43,7 @@
             {% block site_brand %}<a class="brand" href="/">{{ SITE_NAME }}</a>{% endblock %}
             <div class="nav-collapse">
                 <ul class="nav">{% spaceless %}
-                  <li><a href="#">{% trans "Community" %}</a></li>
+                  <li><a href="/community/">{% trans "Community" %}</a></li>
                   <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                       {% trans "Resources" %} <b class="caret"></b>
@@ -54,7 +54,15 @@
                       <li><a href="#">{% trans "Other material" %}</a></li>
                     </ul>
                   </li>
-                  <li><a href="/participate/">{% trans "Participate" %}</a></li>
+                  <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                      {% trans "Participate" %} <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                      <li><a href="/participate/">{% trans "General" %}</a></li>
+                      <li><a href="/participate/scrapers/">{% trans "Scrapers" %}</a></li>
+                    </ul>
+                  </li>
 		{% endspaceless %}</ul>
 		{% include "_account_bar.html" %}
             </div>

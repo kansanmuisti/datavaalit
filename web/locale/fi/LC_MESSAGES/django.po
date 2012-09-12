@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-08-08 17:31+0300\n"
+"POT-Creation-Date: 2012-09-12 05:13+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -58,6 +58,10 @@ msgstr "tai"
 msgid "Sign up"
 msgstr "Rekisteröidy"
 
+#: templates/districts.html:6 templates/municipality.html:6
+msgid "Municipality data"
+msgstr ""
+
 #: templates/homepage.html:7
 msgid "Front page"
 msgstr "Etusivu"
@@ -82,9 +86,17 @@ msgstr "Koodi ja välineet"
 msgid "Other material"
 msgstr "Muu materiaali"
 
-#: templates/site_base.html:57
+#: templates/site_base.html:59
 msgid "Participate"
 msgstr "Osallistu"
+
+#: templates/site_base.html:62
+msgid "General"
+msgstr "Yleistä"
+
+#: templates/site_base.html:63
+msgid "Scrapers"
+msgstr "Ruudunraapijat"
 
 #: templates/profiles/_profile_info.html:3
 msgid "Name"
@@ -101,4 +113,3 @@ msgstr "Sijainti"
 #: templates/profiles/_profile_info.html:6
 msgid "Website"
 msgstr "Kotisivu"
-
