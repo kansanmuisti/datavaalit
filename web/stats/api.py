@@ -43,10 +43,10 @@ class CouncilMemberResource(ModelResource):
         queryset = CouncilMember.objects.all()
         resource_name = 'council_member'
 
-class ElectionDistrictResource(GeometryModelResource):
+class VotingDistrictResource(GeometryModelResource):
     municipality = fields.ToOneField('stats.api.MunicipalityResource',
                                      'municipality')
     election = fields.ToOneField('stats.api.ElectionResource', 'election')
     class Meta:
-        queryset = ElectionDistrict.objects.all()
-        resource_name = 'election_district'
+        queryset = VotingDistrict.objects.all()
+        resource_name = 'voting_district'

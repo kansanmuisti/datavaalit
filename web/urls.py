@@ -14,7 +14,7 @@ v1_api = Api(api_name='v1')
 v1_api.register(MunicipalityResource())
 v1_api.register(VotingPercentageResource())
 v1_api.register(ElectionResource())
-v1_api.register(ElectionDistrictResource())
+v1_api.register(VotingDistrictResource())
 v1_api.register(CouncilMemberResource())
 
 urlpatterns = patterns("",

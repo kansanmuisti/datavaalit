@@ -22,7 +22,7 @@ def district_borders_test(request):
     muni3 = Municipality.objects.get(name='Vantaa')
     munis = (muni1, muni2, muni3)
     election = Election.objects.get(type='muni', year=2012)
-    district_list = ElectionDistrict.objects.filter(municipality__in=munis, election=election)
+    district_list = VotingDistrict.objects.filter(municipality__in=munis, election=election)
     args = {'districts': district_list}
     return render_to_response('districts.html', args,
                 context_instance=RequestContext(request))

@@ -14,7 +14,7 @@ MUNI_URL = "http://tilastokeskus.fi/meta/luokitukset/kunta/001-2012/tekstitiedos
 class Command(BaseCommand):
     help = "Manage stats app"
 
-    def import_election_district_boundaries(self):
+    def import_voting_district_boundaries(self):
         path = os.path.join(self.data_path, 'aan/PKS_aanestysalueet_kkj2.TAB')
         ds = DataSource(path)
         kkj2 = SpatialReference('+proj=tmerc +lat_0=0 +lon_0=24 +k=1 +x_0=2500000 +y_0=0 +ellps=intl +towgs84=-96.0617,-82.4278,-121.7535,4.80107,0.34543,-1.37646,1.4964 +units=m +no_defs')
@@ -32,7 +32,7 @@ class Command(BaseCommand):
             origin_id = feat.get('TKTUNNUS')
 
             args = {'municipality': muni, 'origin_id': origin_id, 'election': election}
-            ed, created = ElectionDistrict.objects.get_or_create(**args)
+            ed, created = VotingDistrict.objects.get_or_create(**args)
             ed.name = name
             gm = GEOSGeometry(geom.wkb, srid=geom.srid)
             if not isinstance(gm, MultiPolygon):
@@ -41,7 +41,7 @@ class Command(BaseCommand):
             ed.save()
             if created:
                 count += 1
-        print "%d election districts added." % count
+        print "%d voting districts added." % count
 
     def import_municipality_boundaries(self):
         path = os.path.join(self.data_path, 'TM_WORLD_BORDERS-0.3.shp')
@@ -167,5 +167,4 @@ class Command(BaseCommand):
         self.import_municipality_boundaries()
         self.import_elections()
         self.import_election_stats()
-        self.import_election_district_boundaries()
-
+        self.import_voting_district_boundaries()

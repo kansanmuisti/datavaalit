@@ -53,7 +53,7 @@ class Election(models.Model):
     # Presidential elections can have two rounds
     round = models.PositiveSmallIntegerField()
 
-class ElectionDistrict(MunicipalityStat):
+class VotingDistrict(MunicipalityStat):
     election = models.ForeignKey(Election, db_index=True)
     origin_id = models.CharField(max_length=10)
     name = models.CharField(max_length=50)
