@@ -22,11 +22,13 @@
                 </ul>
             </li>
         {% else %}
+        {% comment %}
             <li><a href="{% url "acct_login" %}">{% trans "Log in" %}</a></li>
             {% ifsetting ACCOUNT_OPEN_SIGNUP %}
                 <li class="navbar-text">{% trans "or" %}</li>
                 <li><a href="{% url "acct_signup" %}">{% trans "Sign up" %}</a></li>
             {% endifsetting %}
+        {% endcomment %}
         {% endif %}
     </ul>
 </div>
