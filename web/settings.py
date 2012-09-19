@@ -240,6 +240,7 @@ DEBUG_TOOLBAR_CONFIG = {
 
 CMS_TEMPLATES = (
     ('cms/template_base.html', 'Base'),
+    ('cms/template_1col.html', '1 column'),
 )
 
 # local_settings.py can be used to override environment-specific settings
