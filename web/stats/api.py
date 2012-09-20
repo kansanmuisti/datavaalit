@@ -59,7 +59,7 @@ class VotingDistrictResource(GeometryModelResource):
             "municipality": ('exact', 'in'),
         }
 
-class VotingDistrictStatisticResource(GeometryModelResource):
+class VotingDistrictStatisticResource(ModelResource):
     election = fields.ToOneField('stats.api.ElectionResource',
                                  'election')
     district = fields.ToOneField('stats.api.VotingDistrictResource',
@@ -80,3 +80,31 @@ class VotingDistrictStatisticResource(GeometryModelResource):
             "statistic": ('exact', 'in'),
         }
 
+class PersonResource(ModelResource):
+    municipality = fields.ToOneField('stats.api.MunicipalityResource',
+                                     'municipality')
+    class Meta:
+        queryset = Person.objects.order_by('municipality', 'last_name', 'first_name')
+        resource_name = 'person'
+
+class MunicipalityCommitteeResource(ModelResource):
+    municipality = fields.ToOneField('stats.api.MunicipalityResource',
+                                     'municipality')
+    class Meta:
+        queryset = MunicipalityCommittee.objects.order_by('municipality')
+        resource_name = 'municipality_committee'
+
+class MunicipalityTrusteeResource(ModelResource):
+    election = fields.ToOneField('stats.api.ElectionResource', 'election')
+    person = fields.ToOneField('stats.api.PersonResource', 'person')
+    committee = fields.ToOneField('stats.api.MunicipalityCommitteeResource', 'committee')
+
+    def dehydrate(self, bundle):
+        person = bundle.obj.person
+        bundle.data['person_name'] = "%s %s" % (person.first_name, person.last_name)
+        bundle.data['person_party'] =person.party
+        return bundle
+
+    class Meta:
+        queryset = MunicipalityTrustee.objects.order_by('committee', 'role')
+        resource_name = 'municipality_trustee'

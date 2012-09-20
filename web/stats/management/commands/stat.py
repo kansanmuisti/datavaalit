@@ -239,6 +239,68 @@ class Command(BaseCommand):
                 vds.save()
         print "%s voting district datums added." % count
 
+    def import_trustees(self):
+        def convert_date(s):
+            d, m, y = s.split('.')
+            return '-'.join((y, m, d))
+
+        PARTY_MAP = {
+            'VAS': 'Vas.',
+            'SDP': 'SDP',
+            'KOK': 'Kok.',
+            'VIHR': 'Vihr.',
+            'KESK': 'Kesk.',
+            'PS': 'PS',
+            'KD': 'KD',
+            'SKP': 'SKP',
+            'RKP': 'RKP',
+        }
+
+        f = open(os.path.join(self.data_path, 'jkl-luottamusrekisteri-2012-09-20.csv'))
+        reader = csv.reader(f, delimiter=',')
+        reader.next()
+        election = Election.objects.get(year=2008, type="muni")
+        muni = Municipality.objects.get(pk=179)
+        count = 0
+        for row in reader:
+            a = row[0].split()
+            args = {}
+            args['first_name'] = a[-1]
+            args['last_name'] = ' '.join(a[0:-1])
+            args['municipality'] = muni
+            person, created = Person.objects.get_or_create(**args)
+            if row[1] == 'EI':
+                args['party'] = None
+            else:
+                args['party'] = PARTY_MAP[row[1]].decode('utf8')
+            if not created:
+                if person.party != args['party']:
+                    print "WARNING: Party changed for %s %s (%s -> %s)" % (person.first_name, person.last_name,
+                            person.party, args['party'])
+            else:
+                person.party = args['party']
+                person.save()
+
+            args = {'municipality': muni, 'name': row[2]}
+            committee, created = MunicipalityCommittee.objects.get_or_create(**args)
+
+            role = row[5]
+            args = {'election': election, 'person': person, 'committee': committee}
+            args['begin'] = convert_date(row[3])
+            try:
+                trustee = MunicipalityTrustee.objects.get(**args)
+                if trustee.role != role.decode('utf8'):
+                    print "WARNING: Role changed for %s %s" % (person.first_name, person.last_name)
+                    print trustee.role
+                    print role
+            except MunicipalityTrustee.DoesNotExist:
+                trustee = MunicipalityTrustee(**args)
+                trustee.end = convert_date(row[4])
+                trustee.role = role
+                trustee.save()
+                count += 1
+        print "%d municipality trustees saved" % count
+
     def handle(self, **options):
         http = HttpFetcher()
         http.set_cache_dir(os.path.join(settings.PROJECT_ROOT, ".cache"))
@@ -248,6 +310,7 @@ class Command(BaseCommand):
         self.import_municipality_boundaries()
         self.import_elections()
         self.import_election_stats()
+        self.import_trustees()
         self.import_voting_districts()
         self.import_voting_district_boundaries()
         self.import_voting_district_stats()

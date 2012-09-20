@@ -79,3 +79,20 @@ class CouncilMember(MunicipalityStat):
     election = models.ForeignKey(Election)
     name = models.CharField(max_length=50)
     party = models.CharField(max_length=10)
+
+class Person(models.Model):
+    first_name = models.CharField(max_length=20)
+    last_name = models.CharField(max_length=30)
+    party = models.CharField(max_length=10, null=True, blank=True)
+    municipality = models.ForeignKey(Municipality)
+
+class MunicipalityCommittee(MunicipalityStat):
+    name = models.CharField(max_length=100)
+
+class MunicipalityTrustee(models.Model):
+    election = models.ForeignKey(Election)
+    person = models.ForeignKey(Person)
+    committee = models.ForeignKey(MunicipalityCommittee)
+    role = models.CharField(max_length=30)
+    begin = models.DateField()
+    end = models.DateField()
