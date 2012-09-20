@@ -2,10 +2,11 @@ from django.contrib.gis.db import models
 
 class Statistic(models.Model):
     name = models.CharField(max_length=50)
-    slug = models.SlugField(db_index=True, unique=True)
     source = models.CharField(max_length=50)
     source_url = models.URLField(null=True, blank=True)
     fetch_date = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        unique_together = (('name', 'source_url'),)
 
 class YearlyStat(models.Model):
     year = models.PositiveIntegerField()
@@ -70,6 +71,9 @@ class VotingPercentage(MunicipalityStat, Datum):
         return "%s (%d): %f" % (self.municipality.name, self.election.year,
                                 self.value)
 
+class VotingDistrictStatistic(Datum):
+    election = models.ForeignKey(Election)
+    district = models.ForeignKey(VotingDistrict)
 
 class CouncilMember(MunicipalityStat):
     election = models.ForeignKey(Election)

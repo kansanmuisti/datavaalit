@@ -1,4 +1,5 @@
 import os
+import csv
 
 from django.core.management.base import BaseCommand
 from stats.models import *
@@ -32,7 +33,7 @@ class Command(BaseCommand):
             geom.transform(kkj2_to_wgs84)
             origin_id = feat.get('TKTUNNUS')
 
-            args = {'municipality': muni, 'origin_id': origin_id, 'election': election}
+            args = {'municipality': muni, 'origin_id': origin_id}
             ed, created = VotingDistrict.objects.get_or_create(**args)
             ed.name = name
             gm = GEOSGeometry(geom.wkb, srid=geom.srid)
@@ -40,6 +41,7 @@ class Command(BaseCommand):
                 gm = MultiPolygon(gm)
             ed.borders = gm
             ed.save()
+            ed.elections.add(election)
             if created:
                 count += 1
         print "%d voting districts added." % count
@@ -131,13 +133,13 @@ class Command(BaseCommand):
 
     def import_election_stats(self):
         election = Election.objects.get(year=2012, round=2, type="pres")
+        args = dict(name="Presidentinvaalit 2012 2. kierros",
+                    source="Tilastokeskus",
+                    source_url="http://pxweb2.stat.fi/Database/statfin/vaa/pvaa/pvaa_2012/pvaa_2012_fi.asp")
         try:
-            statistic = Statistic.objects.get(slug="presidential-2012-round2")
+            statistic = Statistic.objects.get(**args)
         except Statistic.DoesNotExist:
-            statistic = Statistic(name="Presidentinvaalit 2012 2. kierros",
-                                  slug="presidential-2012-round2",
-                                  source="Tilastokeskus",
-                                  source_url="http://pxweb2.stat.fi/Database/statfin/vaa/pvaa/pvaa_2012/pvaa_2012_fi.asp")
+            statistic = Statistic(**args)
             statistic.save()
 
         f = open(os.path.join(self.data_path, 'Presidentti2012.csv'))
@@ -182,6 +184,61 @@ class Command(BaseCommand):
             vd.elections.add(election)
         print "%d voting districts added." % count
 
+    def import_voting_district_stats(self):
+        src_name = "Tilastokeskus"
+        src_url = "http://pxweb2.stat.fi/Database/StatFin/vaa/kvaa/2008_05/2008_05_fi.asp"
+
+        f = open(os.path.join(self.data_path, '610_kvaa_2008_2009-10-30_tau_137_fis.csv'))
+        reader = csv.reader(f, delimiter=';')
+        reader.next()
+        reader.next()
+        reader.next()
+        stat_names = reader.next()
+        election = Election.objects.get(type="muni", year=2008)
+
+        stat_objs = []
+        for name in stat_names[1:]:
+            name = name.decode('iso8859-1')
+            args = dict(source=src_name, source_url=src_url, name=name)
+            stat, created = Statistic.objects.get_or_create(**args)
+            stat_objs.append(stat)
+
+        count = 0
+        ed_id = None
+        muni_name = None
+        for row in reader:
+            if len(row) < 1:
+                break
+            arr = row[0].split('  ')
+            if len(arr) < 2:
+                arr = row[0].split(' ')
+                # Election district id has two chars
+                if len(arr[0]) == 2:
+                    ed_id = arr[0]
+                continue
+            district_id = ed_id + arr[0].replace(' ', '')
+            district_name = arr[1].decode('iso8859-1')
+            try:
+                vd = VotingDistrict.objects.get(origin_id=district_id)
+            except VotingDistrict.DoesNotExist:
+                print "Skipping district %s %s" % (district_id, district_name)
+                continue
+            for idx, val in enumerate(row[1:]):
+                stat = stat_objs[idx]
+                args = dict(statistic=stat, district=vd, election=election)
+                try:
+                    vds = VotingDistrictStatistic.objects.get(**args)
+                except VotingDistrictStatistic.DoesNotExist:
+                    vds = VotingDistrictStatistic(**args)
+                    count += 1
+                if val == '-':
+                    if vds.pk:
+                        vds.delete()
+                    continue
+                vds.value = val
+                vds.save()
+        print "%s voting district datums added." % count
+
     def handle(self, **options):
         http = HttpFetcher()
         http.set_cache_dir(os.path.join(settings.PROJECT_ROOT, ".cache"))
@@ -193,3 +250,4 @@ class Command(BaseCommand):
         self.import_election_stats()
         self.import_voting_districts()
         self.import_voting_district_boundaries()
+        self.import_voting_district_stats()

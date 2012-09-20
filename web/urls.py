@@ -11,11 +11,13 @@ admin.autodiscover()
 handler500 = "pinax.views.server_error"
 
 v1_api = Api(api_name='v1')
+v1_api.register(StatisticResource())
 v1_api.register(MunicipalityResource())
 v1_api.register(VotingPercentageResource())
 v1_api.register(ElectionResource())
 v1_api.register(VotingDistrictResource())
 v1_api.register(CouncilMemberResource())
+v1_api.register(VotingDistrictStatisticResource())
 
 urlpatterns = patterns("",
     url(r"^admin/", include(admin.site.urls)),
