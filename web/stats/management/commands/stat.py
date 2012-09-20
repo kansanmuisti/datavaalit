@@ -6,9 +6,10 @@ from utils.http import HttpFetcher
 from django.conf import settings
 from django.contrib.gis.gdal import DataSource, SpatialReference, CoordTransform
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
-
+from lxml import html
 
 MUNI_URL = "http://tilastokeskus.fi/meta/luokitukset/kunta/001-2012/tekstitiedosto.txt"
+VOTING_DISTRICT_URL = "http://www.stat.fi/meta/luokitukset/vaalipiiri/001-2012/luokitusavain_aanestyspiirit.html"
 # http://latuviitta.org/documents/YKJ-TM35FIN_muunnos_ogr2ogr_cs2cs.txt
 
 class Command(BaseCommand):
@@ -157,6 +158,29 @@ class Command(BaseCommand):
                 count += 1
         print "%d voting percentage data points added." % count
 
+    def import_voting_districts(self):
+        s = self.http.open_url(VOTING_DISTRICT_URL, "district")
+        doc = html.fromstring(s)
+        table_el = doc.xpath('.//div[@id="leipateksti"]//tbody')[0]
+        election = Election.objects.get(type='muni', year=2012)
+        count = 0
+        for row_el in table_el.xpath("tr")[1:]:
+            tds = row_el.xpath("td")
+            origin_id = tds[2].text_content()
+            name = tds[3].text_content()
+            muni_id = origin_id[2:5]
+            district_id = origin_id[5:]
+            muni = Municipality.objects.get(pk=int(muni_id))
+            try:
+                vd = VotingDistrict.objects.get(origin_id=origin_id)
+            except:
+                vd = VotingDistrict(origin_id=origin_id)
+                count += 1
+            vd.name = name
+            vd.municipality = muni
+            vd.save()
+            vd.elections.add(election)
+        print "%d voting districts added." % count
 
     def handle(self, **options):
         http = HttpFetcher()
@@ -167,4 +191,5 @@ class Command(BaseCommand):
         self.import_municipality_boundaries()
         self.import_elections()
         self.import_election_stats()
+        self.import_voting_districts()
         self.import_voting_district_boundaries()

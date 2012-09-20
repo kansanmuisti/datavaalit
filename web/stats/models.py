@@ -54,7 +54,8 @@ class Election(models.Model):
     round = models.PositiveSmallIntegerField()
 
 class VotingDistrict(MunicipalityStat):
-    election = models.ForeignKey(Election, db_index=True)
+    # Lists the elections for which this district is valid
+    elections = models.ManyToManyField(Election)
     origin_id = models.CharField(max_length=10)
     name = models.CharField(max_length=50)
     borders = models.MultiPolygonField(null=True)
