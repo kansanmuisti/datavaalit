@@ -87,6 +87,28 @@ class PersonResource(ModelResource):
         queryset = Person.objects.order_by('municipality', 'last_name', 'first_name')
         resource_name = 'person'
 
+class PersonElectionStatisticResource(ModelResource):
+    election = fields.ToOneField('stats.api.ElectionResource',
+                                 'election')
+    municipality = fields.ToOneField('stats.api.MunicipalityResource',
+                                     'municipality')
+    district = fields.ToOneField('stats.api.VotingDistrictResource',
+                                 'district', null=True)
+    person = fields.ToOneField('stats.api.PersonResource', 'person')
+
+    def dehydrate(self, bundle):
+        person = bundle.obj.person
+        bundle.data['person_name'] = unicode(person)
+        bundle.data['person_party'] = person.party
+        return bundle
+
+    class Meta:
+        queryset = PersonElectionStatistic.objects.order_by(
+                'election', 'municipality', 'district', 'person__last_name',
+                'person__first_name'
+        )
+        resource_name = 'person_election_statistic'
+
 class MunicipalityCommitteeResource(ModelResource):
     municipality = fields.ToOneField('stats.api.MunicipalityResource',
                                      'municipality')
@@ -101,8 +123,8 @@ class MunicipalityTrusteeResource(ModelResource):
 
     def dehydrate(self, bundle):
         person = bundle.obj.person
-        bundle.data['person_name'] = "%s %s" % (person.first_name, person.last_name)
-        bundle.data['person_party'] =person.party
+        bundle.data['person_name'] = unicode(person)
+        bundle.data['person_party'] = person.party
         return bundle
 
     class Meta:

@@ -19,6 +19,7 @@ v1_api.register(VotingDistrictResource())
 v1_api.register(CouncilMemberResource())
 v1_api.register(VotingDistrictStatisticResource())
 v1_api.register(PersonResource())
+v1_api.register(PersonElectionStatisticResource())
 v1_api.register(MunicipalityCommitteeResource())
 v1_api.register(MunicipalityTrusteeResource())
 

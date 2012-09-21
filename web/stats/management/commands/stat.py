@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import csv
 
@@ -301,6 +302,65 @@ class Command(BaseCommand):
                 count += 1
         print "%d municipality trustees saved" % count
 
+    def import_candidate_stats(self):
+        src_name = "Tilastokeskus"
+        src_url = "http://pxweb2.stat.fi/Database/StatFin/vaa/kvaa/2008_04/2008_04_fi.asp"
+        stat, c = Statistic.objects.get_or_create(source=src_name, source_url=src_url,
+                                                  name="Äänimäärä yhteensä")
+        election = Election.objects.get(year=2008, type="muni")
+        # URL: ...
+        f = open(os.path.join(self.data_path, '530_kvaa_2008_2009-11-02_tau_134_fi.csv'))
+        reader = csv.reader(f, delimiter=';')
+        reader.next()
+        reader.next()
+        reader.next()
+        muni = Municipality.objects.get(pk=179)
+        count = 0
+        person = None
+        for row in reader:
+            if row[0]:
+                LAST_NAMES = ('El Massri', 'Yazdi Aznaveh', 'El Sayed')
+                (name, party, muni_name) = row[0].decode('iso8859-1').split(' / ')
+                arr = name.split(' ')
+                for ln in LAST_NAMES:
+                    if ln in name:
+                        first = arr[-1]
+                        last = ' '.join(arr[0:-1])
+                        break
+                else:
+                    last = arr[0]
+                    first = ' '.join(arr[1:])
+                if muni.name != muni_name:
+                    continue
+                try:
+                    person = Person.objects.get(municipality=muni, first_name=first, last_name=last)
+                except Person.DoesNotExist:
+                    person = None
+                    continue
+            else:
+                if not person:
+                    continue
+                (muni_name, district_name) = row[1].decode('iso8859-1').split(' / ')
+                if muni_name != muni.name:
+                    continue
+                if u'Kunta yhteen' in district_name:
+                    district = None
+                else:
+                    # Skip for now
+                    continue
+                    district = VotingDistrict.objects.get(municipality=muni, name=district_name)
+                args = {'statistic': stat, 'person': person,
+                        'district': district, 'election': election,
+                        'municipality': muni}
+                try:
+                    pes = PersonElectionStatistic.objects.get(**args)
+                except PersonElectionStatistic.DoesNotExist:
+                    pes = PersonElectionStatistic(**args)
+                pes.value = row[3]
+                pes.save()
+
+        l = Person.objects.exclude(municipalitytrustee__committee__name__icontains="vaali")
+
     def handle(self, **options):
         http = HttpFetcher()
         http.set_cache_dir(os.path.join(settings.PROJECT_ROOT, ".cache"))
@@ -314,3 +374,4 @@ class Command(BaseCommand):
         self.import_voting_districts()
         self.import_voting_district_boundaries()
         self.import_voting_district_stats()
+        self.import_candidate_stats()

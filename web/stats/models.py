@@ -86,6 +86,15 @@ class Person(models.Model):
     party = models.CharField(max_length=10, null=True, blank=True)
     municipality = models.ForeignKey(Municipality)
 
+    def __unicode__(self):
+        return "%s %s" % (self.first_name, self.last_name)
+
+class PersonElectionStatistic(Datum):
+    election = models.ForeignKey(Election)
+    person = models.ForeignKey(Person)
+    district = models.ForeignKey(VotingDistrict, null=True)
+    municipality = models.ForeignKey(Municipality)
+
 class MunicipalityCommittee(MunicipalityStat):
     name = models.CharField(max_length=100)
 
