@@ -6,7 +6,7 @@
 <html lang="{{ LANGUAGE_CODE }}">
     <head>
         <meta charset="utf-8" />
-        <title>{% block head_title_base %}{% if SITE_NAME %}{{ SITE_NAME }} | {% endif %}{% block head_title %}{% endblock %}{% endblock %}</title>
+        <title>{% block head_title_base %}{% block head_title %}{% endblock %} | {{ SITE_NAME }}{% endblock %}</title>
         <meta property="og:image" content="http://www.datavaalit.fi/static/images/datavaalit-logo.png" />
         <link rel="icon" type="image/x-icon" href="{% static "images/favicon.png" %}" />
         {% block viewport %}
