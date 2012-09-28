@@ -4,6 +4,9 @@ class Statistic(models.Model):
     name = models.CharField(max_length=50)
     source = models.CharField(max_length=50)
     source_url = models.URLField(null=True, blank=True)
+    # Set if this Statistic is specific to an election
+    election = models.ForeignKey('Election', null=True)
+
     fetch_date = models.DateTimeField(auto_now_add=True)
     class Meta:
         unique_together = (('name', 'source_url'),)
@@ -25,6 +28,12 @@ class Municipality(models.Model):
 
     def __unicode__(self):
         return self.name
+
+# For municipality names in other languages
+class MunicipalityName(models.Model):
+    municipality = models.ForeignKey(Municipality)
+    language = models.CharField(max_length=8)
+    name = models.CharField(max_length=50)
 
 class MunicipalityStat(models.Model):
     municipality = models.ForeignKey(Municipality)
@@ -75,15 +84,26 @@ class VotingDistrictStatistic(Datum):
     election = models.ForeignKey(Election)
     district = models.ForeignKey(VotingDistrict)
 
+class Party(models.Model):
+    name = models.CharField(max_length=80)
+    code = models.CharField(max_length=8)
+    abbrev = models.CharField(max_length=8)
+
+# For party names in other languages
+class PartyName(models.Model):
+    party = models.ForeignKey(Party)
+    language = models.CharField(max_length=8)
+    name = models.CharField(max_length=80)
+
 class CouncilMember(MunicipalityStat):
     election = models.ForeignKey(Election)
     name = models.CharField(max_length=50)
     party = models.CharField(max_length=10)
 
 class Person(models.Model):
-    first_name = models.CharField(max_length=20)
-    last_name = models.CharField(max_length=30)
-    party = models.CharField(max_length=10, null=True, blank=True)
+    first_name = models.CharField(max_length=30)
+    last_name = models.CharField(max_length=50)
+    party = models.ForeignKey(Party, null=True)
     municipality = models.ForeignKey(Municipality)
 
     def __unicode__(self):
@@ -94,6 +114,15 @@ class PersonElectionStatistic(Datum):
     person = models.ForeignKey(Person)
     district = models.ForeignKey(VotingDistrict, null=True)
     municipality = models.ForeignKey(Municipality)
+
+class Candidate(models.Model):
+    person = models.ForeignKey(Person)
+    number = models.PositiveIntegerField()
+    profession = models.CharField(max_length=50)
+    party = models.ForeignKey(Party, null=True)
+    party_code = models.CharField(max_length=8)
+    election = models.ForeignKey(Election)
+    municipality = models.ForeignKey(Municipality, null=True)
 
 class MunicipalityCommittee(MunicipalityStat):
     name = models.CharField(max_length=100)
