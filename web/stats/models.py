@@ -89,6 +89,9 @@ class Party(models.Model):
     code = models.CharField(max_length=8)
     abbrev = models.CharField(max_length=8)
 
+    def __unicode__(self):
+        return "%s" % (self.abbrev)
+
 # For party names in other languages
 class PartyName(models.Model):
     party = models.ForeignKey(Party)

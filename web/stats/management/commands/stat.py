@@ -291,13 +291,12 @@ class Command(BaseCommand):
                 count += 1
         print "%d municipality trustees saved" % count
 
-    def import_candidates(self):
+    def import_parties(self):
         URL_BASE="http://192.49.229.35/K2012/s/ehd_listat/%s_%02d.csv"
         ABBREV_MAP = {'KOK': 'Kok.', 'KESK': 'Kesk.', 'VAS': 'Vas.',
                       'VIHR': 'Vihr.'}
-        election = Election.objects.get(type='muni', year=2012)
-        count = 0
         for i in range(1, 15):
+            # Skip Ahvenanmaa
             if i == 5:
                 continue
             url = URL_BASE % ("puo", i)
@@ -332,6 +331,14 @@ class Command(BaseCommand):
                     sv_name.save()
                 party_dict[party_code] = party
 
+    def import_candidates(self):
+        URL_BASE="http://192.49.229.35/K2012/s/ehd_listat/%s_%02d.csv"
+        election = Election.objects.get(type='muni', year=2012)
+        count = 0
+        for i in range(1, 15):
+            # Skip Ahvenanmaa
+            if i == 5:
+                continue
             url = URL_BASE % ("ehd", i)
             print url
             s = self.http.open_url(url, "candidates")
@@ -428,13 +435,25 @@ class Command(BaseCommand):
         http.set_cache_dir(os.path.join(settings.PROJECT_ROOT, ".cache"))
         self.data_path = os.path.join(settings.PROJECT_ROOT, '..', 'data')
         self.http = http
+        print "Importing parties"
+        self.import_parties()
+        print "Importing municipalities"
         self.import_municipalities()
+        print "Importing municipality boundaries"
         self.import_municipality_boundaries()
+        print "Importing elections"
         self.import_elections()
+        print "Importing election stats"
         self.import_election_stats()
+        print "Importing trustees"
         self.import_trustees()
+        print "Importing candidates"
         self.import_candidates()
+        print "Importing voting districts"
         self.import_voting_districts()
+        print "Importing voting district boundaries"
         self.import_voting_district_boundaries()
+        print "Importing voting district stats"
         self.import_voting_district_stats()
+        print "Importing candidate stats"
         self.import_candidate_stats()
