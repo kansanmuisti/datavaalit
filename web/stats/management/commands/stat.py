@@ -6,6 +6,7 @@ from django.core.management.base import BaseCommand
 from stats.models import *
 from utils.http import HttpFetcher
 from django.conf import settings
+from django import db
 from django.contrib.gis.gdal import DataSource, SpatialReference, CoordTransform
 from django.contrib.gis.geos import GEOSGeometry, MultiPolygon
 from lxml import html
@@ -245,18 +246,6 @@ class Command(BaseCommand):
             d, m, y = s.split('.')
             return '-'.join((y, m, d))
 
-        PARTY_MAP = {
-            'VAS': 'Vas.',
-            'SDP': 'SDP',
-            'KOK': 'Kok.',
-            'VIHR': 'Vihr.',
-            'KESK': 'Kesk.',
-            'PS': 'PS',
-            'KD': 'KD',
-            'SKP': 'SKP',
-            'RKP': 'RKP',
-        }
-
         f = open(os.path.join(self.data_path, 'jkl-luottamusrekisteri-2012-09-20.csv'))
         reader = csv.reader(f, delimiter=',')
         reader.next()
@@ -273,7 +262,7 @@ class Command(BaseCommand):
             if row[1] == 'EI':
                 args['party'] = None
             else:
-                args['party'] = PARTY_MAP[row[1]].decode('utf8')
+                args['party'] = Party.objects.get(code=row[1])
             if not created:
                 if person.party != args['party']:
                     print "WARNING: Party changed for %s %s (%s -> %s)" % (person.first_name, person.last_name,
@@ -301,6 +290,79 @@ class Command(BaseCommand):
                 trustee.save()
                 count += 1
         print "%d municipality trustees saved" % count
+
+    def import_candidates(self):
+        URL_BASE="http://192.49.229.35/K2012/s/ehd_listat/%s_%02d.csv"
+        ABBREV_MAP = {'KOK': 'Kok.', 'KESK': 'Kesk.', 'VAS': 'Vas.',
+                      'VIHR': 'Vihr.'}
+        election = Election.objects.get(type='muni', year=2012)
+        count = 0
+        for i in range(1, 15):
+            if i == 5:
+                continue
+            url = URL_BASE % ("puo", i)
+            print url
+            s = self.http.open_url(url, "candidates")
+            lines = [l.decode('iso8859-1').encode('utf8') for l in s.split('\n')]
+            reader = csv.reader(lines, delimiter=';')
+            party_dict = {}
+            for row in reader:
+                row = [x.strip() for x in row]
+                if len(row) < 1:
+                    continue
+                if row[3] != 'V':
+                    continue
+                party_code = row[9]
+                if party_code in party_dict:
+                    continue
+                if party_code == 'Muut':
+                    continue
+                name = row[13]
+                try:
+                    party = Party.objects.get(code=party_code)
+                except Party.DoesNotExist:
+                    party = Party(code=party_code, name=name)
+                    if party_code in ABBREV_MAP:
+                        abbrev = ABBREV_MAP[party_code]
+                    else:
+                        abbrev = party_code
+                    party.abbrev = abbrev
+                    party.save()
+                    sv_name = PartyName(party=party, language="sv", name=row[14])
+                    sv_name.save()
+                party_dict[party_code] = party
+
+            url = URL_BASE % ("ehd", i)
+            print url
+            s = self.http.open_url(url, "candidates")
+            lines = [l.decode('iso8859-1').encode('utf8') for l in s.split('\n')]
+            reader = csv.reader(lines, delimiter=';')
+            for row in reader:
+                row = [x.strip() for x in row]
+                if not len(row):
+                    continue
+                muni_code = row[2]
+                muni = Municipality.objects.get(id=int(muni_code))
+                party_code = row[10]
+                args = {'first_name': row[15], 'last_name': row[16],
+                        'municipality': muni}
+
+                try:
+                    person = Person.objects.get(**args)
+                except Person.DoesNotExist:
+                    person = Person(**args)
+                    person.save()
+
+                args = {'person': person, 'election': election}
+                try:
+                    candidate = Candidate.objects.get(**args)
+                except Candidate.DoesNotExist:
+                    candidate = Candidate(**args)
+                    count += 1
+                candidate.number = int(row[12])
+                candidate.save()
+            db.reset_queries()
+        print "%d candidates added." % count
 
     def import_candidate_stats(self):
         src_name = "Tilastokeskus"
@@ -371,6 +433,7 @@ class Command(BaseCommand):
         self.import_elections()
         self.import_election_stats()
         self.import_trustees()
+        self.import_candidates()
         self.import_voting_districts()
         self.import_voting_district_boundaries()
         self.import_voting_district_stats()

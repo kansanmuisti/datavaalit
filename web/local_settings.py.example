@@ -16,6 +16,6 @@ DATABASES = {
 #STATICFILES_DIRS.append(os.path.abspath(os.path.dirname(__file__)), 'static')
 
 #ADMINS = [
-    ('First Last', 'first.last@example.com'),
+#    ('First Last', 'first.last@example.com'),
 #]
 #MANAGERS = ADMINS
