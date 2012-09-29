@@ -37,6 +37,12 @@ DATABASES = {
     }
 }
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+    }
+}
+
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
@@ -118,9 +124,9 @@ MIDDLEWARE_CLASSES = [
     "pagination.middleware.PaginationMiddleware",
     "pinax.middleware.security.HideSensistiveFieldsMiddleware",
 #    "cms.middleware.multilingual.MultilingualURLMiddleware",
-    "cms.middleware.page.CurrentPageMiddleware",
-    "cms.middleware.user.CurrentUserMiddleware",
-    "cms.middleware.toolbar.ToolbarMiddleware",
+#    "cms.middleware.page.CurrentPageMiddleware",
+#    "cms.middleware.user.CurrentUserMiddleware",
+#    "cms.middleware.toolbar.ToolbarMiddleware",
 #    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
