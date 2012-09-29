@@ -1,6 +1,7 @@
 from tastypie.resources import ModelResource
 from tastypie.constants import ALL, ALL_WITH_RELATIONS
 from tastypie.contrib.gis.resources import ModelResource as GeometryModelResource
+from tastypie.cache import SimpleCache
 from tastypie import fields
 from stats.models import *
 
@@ -14,8 +15,13 @@ class MunicipalityResource(ModelResource):
                                  attribute='municipalityboundary',
                                  related_name='municipality',
                                  full=True)
+    def dehydrate(self, bundle):
+        alt_names = bundle.obj.municipalityname_set.all()
+        for an in alt_names:
+            bundle.data['name_%s' % an.language] = an.name
+        return bundle
     class Meta:
-        queryset = Municipality.objects.all().order_by('name')
+        queryset = Municipality.objects.all().order_by('name').select_related('municipalityboundary')
         resource_name = 'municipality'
 
 class MunicipalityBoundaryResource(GeometryModelResource):
@@ -80,9 +86,22 @@ class VotingDistrictStatisticResource(ModelResource):
             "statistic": ('exact', 'in'),
         }
 
+class PartyResource(ModelResource):
+    def dehydrate(self, bundle):
+        alt_names = bundle.obj.partyname_set.all()
+        for an in alt_names:
+            bundle.data['name_%s' % an.language] = an.name
+        return bundle
+
+    class Meta:
+        queryset = Party.objects.all()
+        resource_name = 'party'
+
 class PersonResource(ModelResource):
     municipality = fields.ToOneField('stats.api.MunicipalityResource',
                                      'municipality')
+    party = fields.ToOneField('stats.api.PartyResource',
+                              'party')
     class Meta:
         queryset = Person.objects.order_by('municipality', 'last_name', 'first_name')
         resource_name = 'person'
@@ -130,3 +149,23 @@ class MunicipalityTrusteeResource(ModelResource):
     class Meta:
         queryset = MunicipalityTrustee.objects.order_by('committee', 'role')
         resource_name = 'municipality_trustee'
+
+class CandidateResource(ModelResource):
+    election = fields.ToOneField('stats.api.ElectionResource', 'election')
+    person = fields.ToOneField('stats.api.PersonResource', 'person')
+    municipality = fields.ToOneField('stats.api.MunicipalityResource',
+                                     'municipality', null=True)
+    def dehydrate(self, bundle):
+        person = bundle.obj.person
+        bundle.data['person_name'] = unicode(person)
+        return bundle
+
+    class Meta:
+        queryset = Candidate.objects.order_by('election', 'municipality',
+                'number').select_related('person', 'election', 'municipality')
+        resource_name = 'candidate'
+        filtering = {
+            "municipality": ('exact', 'in'),
+            "election": ('exact', 'in'),
+        }
+

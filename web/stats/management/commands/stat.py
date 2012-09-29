@@ -334,6 +334,9 @@ class Command(BaseCommand):
     def import_candidates(self):
         URL_BASE="http://192.49.229.35/K2012/s/ehd_listat/%s_%02d.csv"
         election = Election.objects.get(type='muni', year=2012)
+        party_dict = {}
+        for p in Party.objects.all():
+            party_dict[p.code] = p
         count = 0
         for i in range(1, 15):
             # Skip Ahvenanmaa
@@ -353,12 +356,15 @@ class Command(BaseCommand):
                 party_code = row[10]
                 args = {'first_name': row[15], 'last_name': row[16],
                         'municipality': muni}
-
                 try:
                     person = Person.objects.get(**args)
                 except Person.DoesNotExist:
                     person = Person(**args)
-                    person.save()
+
+                gender = int(row[17])
+                person.gender = {1: 'M', 2:'F'}[gender]
+                person.party = party_dict.get(party_code, None)
+                person.save()
 
                 args = {'person': person, 'election': election}
                 try:
@@ -366,7 +372,10 @@ class Command(BaseCommand):
                 except Candidate.DoesNotExist:
                     candidate = Candidate(**args)
                     count += 1
+                candidate.municipality = muni
                 candidate.number = int(row[12])
+                candidate.profession = row[19]
+                candidate.party_code = party_code
                 candidate.save()
             db.reset_queries()
         print "%d candidates added." % count
@@ -447,13 +456,13 @@ class Command(BaseCommand):
         self.import_election_stats()
         print "Importing trustees"
         self.import_trustees()
-        print "Importing candidates"
-        self.import_candidates()
         print "Importing voting districts"
         self.import_voting_districts()
         print "Importing voting district boundaries"
         self.import_voting_district_boundaries()
         print "Importing voting district stats"
         self.import_voting_district_stats()
+        print "Importing candidates"
+        self.import_candidates()
         print "Importing candidate stats"
         self.import_candidate_stats()

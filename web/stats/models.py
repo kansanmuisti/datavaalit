@@ -104,10 +104,15 @@ class CouncilMember(MunicipalityStat):
     party = models.CharField(max_length=10)
 
 class Person(models.Model):
+    GENDERS = (
+        ('M', 'Male'),
+        ('F', 'Female')
+    )
     first_name = models.CharField(max_length=30)
-    last_name = models.CharField(max_length=50)
+    last_name = models.CharField(max_length=50, db_index=True)
+    gender = models.CharField(max_length=1, null=True, choices=GENDERS)
     party = models.ForeignKey(Party, null=True)
-    municipality = models.ForeignKey(Municipality)
+    municipality = models.ForeignKey(Municipality, db_index=True)
 
     def __unicode__(self):
         return "%s %s" % (self.first_name, self.last_name)
@@ -121,11 +126,11 @@ class PersonElectionStatistic(Datum):
 class Candidate(models.Model):
     person = models.ForeignKey(Person)
     number = models.PositiveIntegerField()
-    profession = models.CharField(max_length=50)
+    profession = models.CharField(max_length=100)
     party = models.ForeignKey(Party, null=True)
     party_code = models.CharField(max_length=8)
-    election = models.ForeignKey(Election)
-    municipality = models.ForeignKey(Municipality, null=True)
+    election = models.ForeignKey(Election, db_index=True)
+    municipality = models.ForeignKey(Municipality, null=True, db_index=True)
 
 class MunicipalityCommittee(MunicipalityStat):
     name = models.CharField(max_length=100)

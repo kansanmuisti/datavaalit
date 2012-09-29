@@ -18,10 +18,12 @@ v1_api.register(ElectionResource())
 v1_api.register(VotingDistrictResource())
 v1_api.register(CouncilMemberResource())
 v1_api.register(VotingDistrictStatisticResource())
+v1_api.register(PartyResource())
 v1_api.register(PersonResource())
 v1_api.register(PersonElectionStatisticResource())
 v1_api.register(MunicipalityCommitteeResource())
 v1_api.register(MunicipalityTrusteeResource())
+v1_api.register(CandidateResource())
 
 urlpatterns = patterns("",
     url(r"^admin/", include(admin.site.urls)),
