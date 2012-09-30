@@ -101,7 +101,7 @@ jQuery ->
 
   municipalities = {}
   fetch_municipalities = ->
-    $.ajax "/api/v1/municipality/?format=json&limit=0",
+    $.ajax "/api/v1/municipality/?format=json&limit=1000",
       dataType: "json"
       success: (data) ->
         muni_list = data.objects
