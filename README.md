@@ -33,7 +33,15 @@ PIP packages:
 Shell commands:
     sudo su postgres
     createuser -R -S -D -P datavaalit
-    createdb -T template_postgis -O datavaalit -E UTF8 datavaalit
+    createdb -T template0 -O datavaalit -l fi_FI.UTF8 -E UTF8 datavaalit
+    # The location of the SQL scripts might vary on distribution.
+    cd /usr/share/postgresql/9.1/contrib/postgis-1.5/
+    psql -d datavaalit -f postgis.sql
+    psql -d datavaalit -f spatial_ref_sys.sql
+    psql -d datavaalit -c "GRANT ALL ON geography_columns TO PUBLIC;"
+    psql -d datavaalit -c "GRANT ALL ON geometry_columns TO PUBLIC;"
+    psql -d datavaalit -c "GRANT ALL ON spatial_ref_sys TO PUBLIC;"
+
 
 Database creation
 =================
