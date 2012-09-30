@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-09-12 05:13+0300\n"
+"POT-Creation-Date: 2012-09-30 22:57+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -46,17 +46,33 @@ msgstr "Ylläpito"
 msgid "Log out"
 msgstr "Kirjaudu ulos"
 
-#: templates/_account_bar.html:25
-msgid "Log in"
-msgstr "Kirjaudu sisään"
+#: templates/candidates.html:6
+msgid "Candidates"
+msgstr "Ehdokkaat"
 
-#: templates/_account_bar.html:27
-msgid "or"
-msgstr "tai"
+#: templates/candidates.html:44
+msgid "Number"
+msgstr "Numero"
 
-#: templates/_account_bar.html:28
-msgid "Sign up"
-msgstr "Rekisteröidy"
+#: templates/candidates.html:48 templates/profiles/_profile_info.html:3
+msgid "Name"
+msgstr "Nimi"
+
+#: templates/candidates.html:51
+msgid "Party"
+msgstr "Puolue"
+
+#: templates/candidates.html:55
+msgid "Profession"
+msgstr "Ammatti"
+
+#: templates/candidates.html:135
+msgid "Candidates for municipality election 2012"
+msgstr "Kunnallisvaaliehdokkaat 2012"
+
+#: templates/candidates.html:137
+msgid "Choose a municipality"
+msgstr "Valitse kunta"
 
 #: templates/districts.html:6 templates/municipality.html:6
 msgid "Municipality data"
@@ -66,7 +82,7 @@ msgstr ""
 msgid "Front page"
 msgstr "Etusivu"
 
-#: templates/site_base.html:46
+#: templates/site_base.html:48
 msgid "Community"
 msgstr "Yhteisö"
 
@@ -75,32 +91,16 @@ msgid "Resources"
 msgstr "Resurssit"
 
 #: templates/site_base.html:52
-msgid "Data"
-msgstr "Data"
-
-#: templates/site_base.html:53
-msgid "Code and Algorithms"
-msgstr "Koodi ja välineet"
-
-#: templates/site_base.html:54
-msgid "Other material"
-msgstr "Muu materiaali"
-
-#: templates/site_base.html:59
 msgid "Participate"
 msgstr "Osallistu"
 
-#: templates/site_base.html:62
+#: templates/site_base.html:55
 msgid "General"
 msgstr "Yleistä"
 
-#: templates/site_base.html:63
+#: templates/site_base.html:56
 msgid "Scrapers"
 msgstr "Ruudunraapijat"
-
-#: templates/profiles/_profile_info.html:3
-msgid "Name"
-msgstr "Nimi"
 
 #: templates/profiles/_profile_info.html:4
 msgid "About"
@@ -113,3 +113,4 @@ msgstr "Sijainti"
 #: templates/profiles/_profile_info.html:6
 msgid "Website"
 msgstr "Kotisivu"
+
