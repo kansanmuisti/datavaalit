@@ -204,7 +204,7 @@ INSTALLED_APPS = [
     # project
     "about",
     "profiles",
-    "django_extensions",
+    #"django_extensions",
     "stats"
 ]
 
