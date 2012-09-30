@@ -124,7 +124,7 @@ MIDDLEWARE_CLASSES = [
     "pagination.middleware.PaginationMiddleware",
     "pinax.middleware.security.HideSensistiveFieldsMiddleware",
 #    "cms.middleware.multilingual.MultilingualURLMiddleware",
-#    "cms.middleware.page.CurrentPageMiddleware",
+    "cms.middleware.page.CurrentPageMiddleware",
 #    "cms.middleware.user.CurrentUserMiddleware",
 #    "cms.middleware.toolbar.ToolbarMiddleware",
 #    "debug_toolbar.middleware.DebugToolbarMiddleware",
@@ -204,6 +204,7 @@ INSTALLED_APPS = [
     # project
     "about",
     "profiles",
+    "django_extensions",
     "stats"
 ]
 

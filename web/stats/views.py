@@ -26,3 +26,7 @@ def district_borders_test(request):
     args = {'districts': district_list}
     return render_to_response('districts.html', args,
                 context_instance=RequestContext(request))
+
+def explore_candidates(request):
+    return render_to_response('candidates.html',
+                              context_instance=RequestContext(request))

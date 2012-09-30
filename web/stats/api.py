@@ -11,10 +11,10 @@ class StatisticResource(ModelResource):
         resource_name = 'statistic'
 
 class MunicipalityResource(ModelResource):
-    boundary = fields.ToOneField('stats.api.MunicipalityBoundaryResource',
-                                 attribute='municipalityboundary',
-                                 related_name='municipality',
-                                 full=True)
+    #boundary = fields.ToOneField('stats.api.MunicipalityBoundaryResource',
+    #                             attribute='municipalityboundary',
+    #                             related_name='municipality',
+    #                             full=True)
     def dehydrate(self, bundle):
         alt_names = bundle.obj.municipalityname_set.all()
         for an in alt_names:

@@ -1,0 +1,126 @@
+{% extends "site_base.html" %}
+
+{% load i18n static compress %}
+{% load static %}
+
+{% block head_title %}{% trans "Candidates" %}{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" type="text/css" href="{% static "css/DT_bootstrap.css" %}">
+<link rel="stylesheet" type="text/css" href="{% static "css/chosen.css" %}">
+{% endblock %}
+
+{% block extra_script %}
+{% compress js %}
+<script type="text/javascript" src="{% static "js/jquery.dataTables.js" %}"></script>
+<script type="text/javascript" src="{% static "js/DT_bootstrap.js" %}"></script>
+<script type="text/javascript" src="{% static "js/chosen.jquery.min.js" %}"></script>
+{% endcompress %}
+{% compress js %}
+<script type="text/coffeescript">
+jQuery ->
+  selected_municipality = 91
+
+  columns = [
+    {
+      name: "{% trans "Number" %}"
+      field: "number"
+      width: "6em"
+    }, {
+      name: "{% trans "Name" %}"
+      field: "person_name"
+    }, {
+      name: "{% trans "Party" %}"
+      field: "party_code"
+      width: "8em"
+    }, {
+      name: "{% trans "Profession" %}"
+      field: "profession"
+    }    
+  ]
+  current_table = null
+  draw_table = (objects) ->
+    if current_table
+      current_table.fnDestroy()
+    rows = []
+    for obj in objects
+      row = []
+      for col in columns
+        row.push(obj[col.field])
+      rows.push(row)
+    cols = []
+    for col in columns
+      attr = {sTitle: col.name}
+      if 'width' of col
+        attr.sWidth = col.width
+      cols.push(attr)
+    args = {
+      sDom: "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>"
+      sPaginationType: "bootstrap"
+      oLanguage: {
+        sLengthMenu: "{% trans "_MENU_ records per page" %}"
+      }
+      aaData: rows
+      aoColumns: cols
+    }
+    console.log args
+    current_table = $('#candidate-table').dataTable args
+
+  fetch_data = (url_base) ->
+    objects = []
+    fetch_next = (url) ->
+      console.log url
+      $.ajax url,
+        dataType: "json"
+        success: (data) ->
+          meta = data.meta
+          objects.push.apply objects, data.objects
+          if meta.next
+            fetch_next meta.next
+          else
+            draw_table objects
+        error: ->
+          alert "Error fetching data from server."
+    fetch_next url_base
+
+  municipalities = {}
+  fetch_municipalities = ->
+    $.ajax "/api/v1/municipality/?format=json&limit=0",
+      dataType: "json"
+      success: (data) ->
+        muni_list = data.objects
+        el_list = $("#municipality-chooser")
+        for muni in muni_list
+          if muni.id == selected_municipality
+            selected = "selected "
+          else
+            selected = ""
+          el = $("<option #{ selected }value=#{ muni.id }>#{ muni.name }</option>")
+          el_list.append el
+        $("#municipality-chooser").trigger "liszt:updated"
+
+  update_view = (ev, args) ->
+    muni_id = parseInt(args.selected)
+    url_base = "/api/v1/candidate/?format=json&limit=500&municipality=" + muni_id
+    selected_municipality = muni_id
+    fetch_data url_base
+
+  fetch_municipalities()
+  # Start with Helsinki
+  update_view null, {selected: selected_municipality.toString()}
+
+  $("#municipality-chooser").chosen().change(update_view)
+
+</script>
+{% endcompress %}
+{% endblock %}
+
+{% block body %}
+  <h1>{% trans "Candidates for municipality election 2012" %}</h1>
+  <div style="margin-bottom: 20px">
+    <select data-placeholder="{% trans "Choose a municipality" %}" id="municipality-chooser">
+    </select>
+  </div>
+  <table id="candidate-table" class="table table-striped table-bordered"></table>
+{% endblock %}
+
