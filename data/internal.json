@@ -1,0 +1,8 @@
+{
+  "elections": [
+    {"type": "pres", "year": 2012, "date": "2012-01-22", "round": 1},
+    {"type": "pres", "year": 2012, "date": "2012-02-05", "round": 2},
+    {"type": "muni", "year": 2008, "date": "2008-10-26"},
+    {"type": "muni", "year": 2012, "date": "2012-10-28"}
+  ]
+}
