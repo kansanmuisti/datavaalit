@@ -10,6 +10,11 @@ class Backend(object):
         self.logger = logger
         self.replace = replace
 
+    def submit_elections(self, elections):
+        print "Elections:"
+        for el in elections:
+            print "  %s" % el
+
     def submit_parties(self, parties):
         print "Parties:"
         for p in parties:
@@ -39,3 +44,5 @@ def register_importer(importer_class):
     if importer_class in importer_list:
         return
     importer_list.append(importer_class)
+    return importer_class
+

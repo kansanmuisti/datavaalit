@@ -205,7 +205,9 @@ INSTALLED_APPS = [
     "about",
     "profiles",
     #"django_extensions",
-    "stats"
+    "stats",
+    "geo",
+    "political",
 ]
 
 FIXTURE_DIRS = [
@@ -249,6 +251,9 @@ CMS_TEMPLATES = (
     ('cms/template_base.html', 'Base'),
     ('cms/template_1col.html', '1 column'),
 )
+
+FACEBOOK_APP_ID="152378504906843"
+FACEBOOK_API_SECRET="a6d4aeadb6d7a73e90e4bca1e4b319dd"
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.

@@ -4,6 +4,8 @@ from tastypie.contrib.gis.resources import ModelResource as GeometryModelResourc
 from tastypie.cache import SimpleCache
 from tastypie import fields
 from stats.models import *
+from geo.models import *
+from political.models import *
 
 class StatisticResource(ModelResource):
     class Meta:

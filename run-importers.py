@@ -1,14 +1,16 @@
 #!/usr/bin/env python
 
+import sys
 import logging
 from optparse import OptionParser
-import requests_cache
+#import requests_cache
 
 from importers import importer_list, Backend
 from importers.utils.http import HttpFetcher
 import importers.list
 
 importer_objs = []
+logger = None
 
 def init_logging(debug=False):
     logger = logging.getLogger("importer")
@@ -25,8 +27,9 @@ def init_logging(debug=False):
 
 def run_import(data_type):
     for imp in importer_objs:
-        import_func = getattr(imp, "import_%s" % data_type)
+        import_func = getattr(imp, "import_%s" % data_type, None)
         if import_func:
+            logger.info("Running importer '%s' for %s" % (imp.name, data_type))
             import_func()
 
 
@@ -59,11 +62,18 @@ if options.inspects:
 
 if options.imports:
     backend = None
-    DATA_TYPES = ("parties", "candidates")
+    DATA_TYPES = ("elections", "parties", "candidates")
+
+    for imp in options.imports:
+        if imp not in DATA_TYPES:
+            sys.stderr.write("Unsupported data type '%s'.\nSupported data types:\n" % imp)
+            for dt in DATA_TYPES:
+                sys.stderr.write("  %s\n" % dt)
+
     logger = init_logging(debug=options.verbose)
     http = HttpFetcher()
     http.set_cache_dir(".cache")
-    requests_cache.configure("importers")
+    #requests_cache.configure("importers")
 
     if options.django:
         from importers.backends.django import DjangoBackend

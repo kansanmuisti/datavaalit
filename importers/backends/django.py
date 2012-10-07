@@ -15,8 +15,29 @@ sys.path.append(project_path + "/apps")
 
 from django import db
 from web.stats.models import *
+from web.geo.models import *
+from web.political.models import *
 
 class DjangoBackend(Backend):
+    def submit_elections(self, elections):
+        count = 0
+        for el in elections:
+            args = {'year': el['year'], 'type': el['type']}
+            if 'round' in el:
+                args['round'] = el['round']
+
+            try:
+                el_obj = Election.objects.get(**args)
+                if not self.replace:
+                    continue
+            except Election.DoesNotExist:
+                el_obj = Election(**args)
+            el_obj.date = el['date']
+            el_obj.round = el.get('round', 1)
+            count += 1
+            el_obj.save()
+        self.logger.info("%d elections added" % count)
+
     def submit_parties(self, parties):
         party_dict = {}
         for party in parties:
@@ -40,7 +61,7 @@ class DjangoBackend(Backend):
                 try:
                     pn = PartyName.objects.get(**args)
                 except PartyName.DoesNotExist:
-                    pn = PartyName(args)
+                    pn = PartyName(**args)
                 pn.name = alt_name['name']
                 pn.save()
 
@@ -95,7 +116,7 @@ class DjangoBackend(Backend):
             db.reset_queries()
             new_muni = muni_dict[int(c['municipality']['code'])]
             if new_muni != muni:
-                self.logger.debug("saving candidates from %s" % new_muni.name)
+                self.logger.debug("saving candidates from %s (updated so far %d)" % (new_muni.name, count))
             muni = new_muni
             args = {'first_name': c['first_name'], 'last_name': c['last_name'],
                     'municipality': muni}

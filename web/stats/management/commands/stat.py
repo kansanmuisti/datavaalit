@@ -109,30 +109,6 @@ class Command(BaseCommand):
                 count += 1
         print "%d municipalities added." % count
 
-    def import_elections(self):
-        f = open(os.path.join(self.data_path, 'elections.txt'))
-        count = 0
-        for line in f.readlines():
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            ar = line.split('\t')
-            (el_year, el_type) = ar[0:2]
-            el_date = ar[2]
-            if len(ar) > 3:
-                el_round = int(ar[3])
-            else:
-                el_round = 1
-            try:
-                el = Election.objects.get(year=el_year, type=el_type,
-                                          round=el_round)
-            except Election.DoesNotExist:
-                el = Election(year=el_year, type=el_type, round=el_round,
-                              date=el_date)
-                count += 1
-                el.save()
-        print "%d elections added." % count
-
     def import_election_stats(self):
         election = Election.objects.get(year=2012, round=2, type="pres")
         args = dict(name="Presidentinvaalit 2012 2. kierros",
@@ -444,14 +420,10 @@ class Command(BaseCommand):
         http.set_cache_dir(os.path.join(settings.PROJECT_ROOT, ".cache"))
         self.data_path = os.path.join(settings.PROJECT_ROOT, '..', 'data')
         self.http = http
-        print "Importing parties"
-        self.import_parties()
         print "Importing municipalities"
         self.import_municipalities()
         print "Importing municipality boundaries"
         self.import_municipality_boundaries()
-        print "Importing elections"
-        self.import_elections()
         print "Importing election stats"
         self.import_election_stats()
         print "Importing trustees"
@@ -462,7 +434,5 @@ class Command(BaseCommand):
         self.import_voting_district_boundaries()
         print "Importing voting district stats"
         self.import_voting_district_stats()
-        print "Importing candidates"
-        self.import_candidates()
         print "Importing candidate stats"
         self.import_candidate_stats()
