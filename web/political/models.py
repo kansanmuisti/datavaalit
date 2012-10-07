@@ -79,3 +79,16 @@ from social.models import Feed
 
 class CandidateFeed(Feed):
     candidate = models.ForeignKey(Candidate)
+    
+class ExpenseType(models.Model):
+    '''Models different types of expenses a campaign can have.
+    '''
+    description = models.CharField(max_lenght=100)
+    
+class Expenses(models.Model):
+    '''Models different election campaign expenses.
+    '''
+
+    candidate = models.ForeignKey(Candidate)
+    expense_type = models.ForeignKey(ExpenseType)
+    
