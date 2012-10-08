@@ -1,0 +1,58 @@
+{% extends "site_base.html" %}
+
+{% load i18n static compress %}
+{% load static %}
+
+{% block head_title %}Kunnallisvaaliehdokkaiden some-feedit{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" type="text/css" href="{% static "css/chosen.css" %}">
+{% endblock %}
+
+{% block extra_script %}
+{% compress js %}
+<script type="text/javascript" src="{% static "js/jquery.dataTables.js" %}"></script>
+<script type="text/javascript" src="{% static "js/DT_bootstrap.js" %}"></script>
+<script type="text/javascript" src="{% static "js/chosen.jquery.min.js" %}"></script>
+{% endcompress %}
+{% compress js %}
+<script type="text/coffeescript">
+jQuery ->
+  municipalities = {}
+  selected_municipality = 91
+  fetch_municipalities = ->
+    $.ajax "/api/v1/municipality/?format=json&limit=1000",
+      dataType: "json"
+      success: (data) ->
+        muni_list = data.objects
+        el_list = $("#municipality-chooser")
+        for muni in muni_list
+          if muni.id == selected_municipality
+            selected = "selected "
+          else
+            selected = ""
+          el = $("<option #{ selected }value=#{ muni.id }>#{ muni.name }</option>")
+          el_list.append el
+        $("#municipality-chooser").trigger "liszt:updated"
+
+  update_view = (ev, args) ->
+    muni_id = parseInt(args.selected)
+    url_base = "/api/v1/candidate_social_feed/?format=json&limit=500&municipality=" + muni_id
+    selected_municipality = muni_id
+    fetch_data url_base
+  $("#municipality-chooser").chosen().change(update_view)
+
+  fetch_municipalities()
+
+</script>
+{% endcompress %}
+{% endblock %}
+
+{% block body %}
+  <h1>Kunnallisvaaliehdokkaiden some-feedit</h1>
+  <div style="margin-bottom: 20px">
+    <select data-placeholder="{% trans "Choose a municipality" %}" id="municipality-chooser">
+    </select>
+  </div>
+{% endblock %}
+
