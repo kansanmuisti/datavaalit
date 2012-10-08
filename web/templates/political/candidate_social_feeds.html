@@ -1,0 +1,265 @@
+{% extends "site_base.html" %}
+
+{% load i18n static compress %}
+{% load static %}
+
+{% block head_title %}Kunnallisvaaliehdokkaiden some-feedit{% endblock %}
+
+{% block extra_style %}
+<link rel="stylesheet" type="text/css" href="{% static "css/chosen.css" %}">
+
+{% compress css inline %}
+<style type="text/less">
+
+.some-update {
+	clear: both;
+	margin-bottom: 20px;
+
+	.candidate-picture {
+		float: left;
+		width: 50px;
+		height: 50px;
+	}
+	.update-info {
+		margin-left: 70px;
+		width: 420px;
+	}
+	.candidate-id {
+		a.candidate-name {
+			font-weight: bold;
+			color: #d44413;
+		}
+	}
+	.update-time {
+		color: #aaa;
+		font-size: 80%;
+	}
+	.share-media {
+		margin-top: 10px;
+		background-color: #eee;
+		border: 1px solid #ddd;
+		overflow: hidden;
+	}
+	.share-picture {
+		float: left;
+		img {
+			clear: both;
+		}
+	}
+	.share-title {
+		font-weight: bold;
+		color: #d44413
+	}
+	.share-caption {
+		font-size: 90%;
+	}
+	.share-info {
+		color: gray;
+		text-decoration: none;
+		margin-left: 90px;
+		font-size: 90%;
+		padding-left: 20px;
+	}
+	
+}
+
+</style>
+{% endcompress %}
+{% endblock %}
+
+{% block extra_script %}
+{% compress js %}
+<script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
+<script type="text/javascript" src="{% static "js/backbone.js" %}"></script>
+<script type="text/javascript" src="{% static "js/backbone-tastypie.js" %}"></script>
+{% endcompress %}
+{% compress js %}
+<script type="text/javascript" src="{% static "js/moment.js" %}"></script>
+<script type="text/javascript" src="{% static "js/moment-fi.js" %}"></script>
+{% endcompress %}
+{% compress js %}
+<script type="text/javascript" src="{% static "js/chosen.jquery.min.js" %}"></script>
+{% endcompress %}
+{% compress js %}
+<script type="text/coffeescript">
+
+SocialFeed = Backbone.Tastypie.Model.extend
+  urlRoot: '/api/v1/candidate_social_feed/'
+
+SocialFeedList = Backbone.Tastypie.Collection.extend
+  urlRoot: '/api/v1/candidate_social_feed/'
+  model: SocialFeed
+
+SocialUpdate = Backbone.Tastypie.Model.extend
+  urlRoot: '/api/v1/social_update/'
+  get_feed: (feed_list) ->
+    # A little hack to make sure we have compatible feed names
+    if @.feed
+      return feed
+    feed_id = @.get('feed').replace('/social_feed/', '/candidate_social_feed/')
+    @.feed = feed_list.get(feed_id)
+    return @.feed
+  get_candidate: (feed_list) ->
+    feed = @.get_feed(feed_list)
+    @.candidate = feed.get('candidate')
+    return @.candidate
+
+SocialUpdateList = Backbone.Tastypie.Collection.extend
+  urlRoot: '/api/v1/social_update/'
+  model: SocialUpdate
+
+SocialUpdateView = Backbone.View.extend
+  tagName: 'li'
+  className: 'some-update'
+  template: _.template $('#some-update-template').html()
+  initialize: ->
+    @.model.on 'change', @.render, @
+  render: ->
+    args = @model.toJSON()
+    args.created_time = moment(args.created_time)
+    _.extend args,
+      candidate: @.model.candidate
+      feed: @.model.feed.toJSON()
+    console.log @.$el
+    @.$el.html @template(args)
+    return @.$el
+
+AppView = Backbone.View.extend
+  el: '#some-updates'
+  initialize: ->
+    @.feed_list = new SocialFeedList
+    @.feed_list.on 'reset', @.reset_feeds, @
+    @.update_list = new SocialUpdateList
+    @.update_list.on 'add', @.add_one, @
+    @.update_list.on 'reset', @.add_all, @
+  add_one: (update) ->
+    console.log "add one", update
+    cand = update.get_candidate(@.feed_list)
+    update_view = new SocialUpdateView {model: update}
+    console.log @
+    @.$el.append update_view.render()
+  add_all: ->
+    console.log "add all"
+    this.$el.html('')
+    @.update_list.each @.add_one, @
+  reset_feeds: ->
+    console.log "reset feeds"
+    ids = (feed.get('id') for feed in @.feed_list.models)
+    _.extend @.update_list.filters,
+      feed__in: ids.join(',')
+    @.update_list.fetch()
+
+api_fetch = (type, opts) ->
+  url = "/api/v1/#{ type }/?format=json"
+  if opts.limit
+    url += "&limit=" + opts.limit
+  else
+    url += "&limit=100"
+  if opts.search_args
+    url += "&" + opts.search_args
+  if opts.error_callback
+    error_cb = opts.error_callback
+  else
+    error_cb = ->
+      alert "Communication with server failed"
+
+  objs = []
+  fetch_objs = (url) ->
+    $.ajax url,
+      dataType: "json"
+      success: (data) ->
+        objs = objs.concat data.objects
+        if data.meta.next && opts.all
+          fetch_objs data.meta.next
+        else
+          opts.callback objs
+      error: error_cb
+  fetch_objs url
+
+jQuery ->
+  app_view = new AppView
+
+  municipalities = {}
+  selected_municipality = 91
+
+  switch_muni = (muni_id) ->
+    selected_municipality = muni_id
+    fetch_feeds muni_id
+    
+  fetch_munis = ->
+    api_fetch "municipality",
+      limit: 1000,
+      all: true,
+      callback: (objs) ->
+        muni_list = objs
+        el_list = $("#municipality-chooser")
+        for muni in muni_list
+          if muni.id == selected_municipality
+            selected = "selected "
+          else
+            selected = ""
+          el = $("<option #{ selected }value=#{ muni.id }>#{ muni.name }</option>")
+          el_list.append el
+        $("#municipality-chooser").trigger "liszt:updated"
+        switch_muni selected_municipality
+
+  fetch_feeds = (muni_id) ->
+    _.extend app_view.feed_list.filters,
+      candidate__municipality: muni_id
+    app_view.feed_list.fetch()
+
+  $("#municipality-chooser").chosen().change((ev, args) ->
+    muni_id = parseInt(args.selected)
+    switch_muni muni_id
+  )
+
+  fetch_munis()
+</script>
+{% endcompress %}
+{% endblock %}
+
+{% block body %}
+  <h1>Kunnallisvaaliehdokkaiden some-feedit</h1>
+  <div style="margin-bottom: 20px">
+    <select data-placeholder="{% trans "Choose a municipality" %}" id="municipality-chooser">
+    </select>
+  </div>
+  <div>
+    <ul id="some-updates" class="unstyled">
+    </ul>
+  </div>
+  <script type="text/template" id="some-update-template">
+    <a class="candidate-picture" href="#">
+      <% if (feed.picture) { %>
+      <img src="<%= feed.picture %>" />
+      <% } else { %>
+      <div class="no-thumbnail"></div>
+      <% } %>
+    </a>
+    <div class="update-info">
+      <div class="candidate-id">
+        <a class="candidate-name" href="#"><%= candidate.person_name %></a> /
+        <span class="candidate-party"><%= candidate.party_code %></span>
+      </div>
+      <div class="update-text"><%= text %></div>
+      <% if (picture || share_link) { %>
+      <div class="share-media well-small">
+        <div style="clear: both">
+        <div class="share-picture">
+          <a href="<%= share_link %>"><img src="<%= picture %>" /></a>
+        </div>
+        <a href="<%= share_link %>">
+          <div class="share-info">
+            <div class="share-title"><%= share_title %></div>
+            <div class="share-caption"><%= share_caption %></div>
+            <div class="share-description"><%= share_description %></div>
+          </div>
+        </a>
+        </div>
+      </div>
+      <% } %>
+      <div class="update-time"><%= created_time.from() %></div>
+    </div>
+  </script>
+{% endblock %}
+
