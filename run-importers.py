@@ -62,7 +62,7 @@ if options.inspects:
 
 if options.imports:
     backend = None
-    DATA_TYPES = ("elections", "parties", "candidates")
+    DATA_TYPES = ("elections", "parties", "candidates", "prebudgets")
 
     for imp in options.imports:
         if imp not in DATA_TYPES:
