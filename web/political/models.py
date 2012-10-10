@@ -81,12 +81,12 @@ class CandidateFeed(Feed):
 class ExpenseType(models.Model):
     '''Models different types of expenses a campaign can have.
     '''
-    description = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
     
-class CandidateExpenses(models.Model):
+class Expense(models.Model):
     '''Models different election campaign expenses.
     '''
 
-    candidate = models.ForeignKey(Candidate)
+    candidate = models.ForeignKey(Candidate, db_index=True)
     expense_type = models.ForeignKey(ExpenseType)
     
