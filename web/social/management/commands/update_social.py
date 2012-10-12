@@ -136,8 +136,8 @@ class Command(BaseCommand):
             for post in g['data']:
                 # Sanity check
                 assert post['from']['id'] == feed.origin_id
-                if post['type'] in ('question', 'swf'):
-                    # We skip questions and SWF updates for now.
+                if post['type'] in ('question', 'swf', 'music'):
+                    # We skip these updates for now.
                     continue
                 if post['type'] == 'status' and 'message' not in post:
                     # We're not interested in status updates with no content.
