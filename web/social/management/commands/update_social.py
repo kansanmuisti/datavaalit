@@ -112,11 +112,11 @@ class Command(BaseCommand):
             self.logger.error(e)
             feed.update_error_count += 1
             feed.save()
+            # FIXME: Doesn't work
             raise UpdateError()
 
         feed.picture = feed_info.get('picture', {}).get('data', {}).get('url', None)
         feed.interest = feed_info.get('likes', None)
-        feed.save()
 
         if full_update:
             count = 100
@@ -125,7 +125,13 @@ class Command(BaseCommand):
         url = '%s/posts&limit=%d' % (feed.origin_id, count)
         while True:
             self.logger.info('Fetching %s' % url)
-            g = fbg.get(url)
+            try:
+                g = fbg.get(url)
+            except pyfaceb.exceptions.FBHTTPException as e:
+                self.logger.error(e)
+                feed.update_error_count += 1
+                feed.save()
+                raise UpdateError()
             found = False
             for post in g['data']:
                 # Sanity check
@@ -202,6 +208,8 @@ class Command(BaseCommand):
                 # the feed is up-to-date.
                 break
             url = "%s/posts&limit=%d&until=%d" % (feed.origin_id, count, until)
+        feed.update_error_count = 0
+        feed.save()
 
     def update_facebook(self):
         import requests_cache
