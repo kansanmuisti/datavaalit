@@ -6,6 +6,7 @@ import email.utils
 import urllib
 import urlparse
 import pprint
+import pyfaceb
 import dateutil.parser
 import dateutil.tz
 
@@ -21,6 +22,9 @@ from social.utils import get_facebook_token
 
 RAPID_UPDATE_TIME = datetime.timedelta(hours=2)
 REFRESH_TIME = datetime.timedelta(weeks=2)
+
+class UpdateError(Exception):
+    pass
 
 class Command(BaseCommand):
     help = "Update social media feeds"
@@ -87,13 +91,29 @@ class Command(BaseCommand):
         for feed in feed_list:
             self.process_twitter_timeline(twitter, feed)
 
+    def set_field_with_len(self, update, field_name, text):
+        max_length = update.__class__._meta.get_field(field_name).max_length
+        if text and len(text) > max_length:
+            self.logger.warning("Truncating FB update %s field '%s' (length %d)" % (
+                update.origin_id, field_name, len(text)))
+            text = text[0:max_length-3]
+            text += "..."
+        setattr(update, field_name, text)
+
     @transaction.commit_on_success
     def process_facebook_timeline(self, fbg, feed, newer_than=0, full_update=False):
         self.logger.info('Processing feed %s: %s' % (feed.account_name, feed.origin_id))
 
         # First update the feed itself
         url = '%s&fields=picture,likes,about' % feed.origin_id
-        feed_info = fbg.get(url)
+        try:
+            feed_info = fbg.get(url)
+        except pyfaceb.exceptions.FBHTTPException as e:
+            self.logger.error(e)
+            feed.update_error_count += 1
+            feed.save()
+            raise UpdateError()
+
         feed.picture = feed_info.get('picture', {}).get('data', {}).get('url', None)
         feed.interest = feed_info.get('likes', None)
         feed.save()
@@ -127,12 +147,12 @@ class Command(BaseCommand):
 
                 utc = dateutil.parser.parse(post['created_time'])
                 upd.created_time = utc.astimezone(dateutil.tz.tzlocal())
-                upd.text = post.get('message', None)
+                self.set_field_with_len(upd, 'text', post.get('message', None))
                 upd.link = post.get('link', None)
                 upd.picture = post.get('picture', None)
-                upd.share_title = post.get('name', None)
-                upd.share_caption = post.get('caption', None)
-                upd.share_description = post.get('description', None)
+                self.set_field_with_len(upd, 'share_title', post.get('name', None))
+                self.set_field_with_len(upd, 'share_caption', post.get('caption', None))
+                self.set_field_with_len(upd, 'share_description', post.get('description', None))
                 if upd.picture and len(upd.picture) > 250:
                     self.logger.warning("%s: Removing too long picture link" % upd.origin_id)
                     upd.picture = None
@@ -167,12 +187,6 @@ class Command(BaseCommand):
                 else:
                     pprint.pprint(post)
                     raise Exception("Unknown FB update type: %s" % post['type'])
-                if upd.text:
-                    max_length = Update._meta.get_field('text').max_length
-                    if len(upd.text) > max_length:
-                        self.logger.warning("Truncating FB update %s (length %d)" % (upd.origin_id, len(upd.text)))
-                        upd.text = upd.text[0:max_length-3]
-                        upd.text += "..."
                 upd.save()
 
             if not 'paging' in g:
@@ -200,7 +214,10 @@ class Command(BaseCommand):
         fbg = FBGraph(token)
         feed_list = feed_list.filter(Q(last_update__lt=update_dt) | Q(last_update__isnull=True))
         for feed in feed_list:
-            self.process_facebook_timeline(fbg, feed)
+            try:
+                self.process_facebook_timeline(fbg, feed)
+            except UpdateError:
+                pass
 
     def handle(self, *args, **options):
         self.logger = logging.getLogger(__name__)

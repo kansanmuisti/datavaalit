@@ -65,7 +65,8 @@ class YleVaalikoneImporter(Importer):
             if fb_feed:
                 # Take the last component in the path
                 fb_feed = fb_feed.strip('/').split('/')[-1]
-                if "facebook.com" in fb_feed or 'profile.php' in fb_feed:
+                if 'facebook.com' in fb_feed or 'profile.php' in fb_feed or \
+                        'index.php' in fb_feed:
                     fb_feed = None
                 elif '(' in fb_feed or ' ' in fb_feed:
                     fb_feed = None
