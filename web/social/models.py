@@ -17,6 +17,16 @@ class Feed(models.Model):
     class Meta:
         unique_together = (('type', 'origin_id'),)
 
+    def update_from_origin(self):
+        from social.utils import get_facebook_graph
+
+        assert(self.type == 'FB')
+        addr = '%s&fields=picture,likes,about,username' % self.origin_id
+        feed_info = get_facebook_graph(addr)
+        self.picture = feed_info.get('picture', {}).get('data', {}).get('url', None)
+        self.interest = feed_info.get('likes', None)
+        return feed_info
+
 class Update(models.Model):
     feed = models.ForeignKey(Feed, db_index=True)
     text = models.CharField(max_length=4000, null=True)

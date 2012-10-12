@@ -6,6 +6,7 @@ from importers import Backend
 
 import pinax
 import pinax.env
+import pyfaceb
 
 my_path = os.path.abspath(os.path.dirname(__file__))
 project_path = os.path.normpath(my_path + '/../../web')
@@ -17,6 +18,7 @@ from django import db
 from web.stats.models import *
 from web.geo.models import *
 from web.political.models import *
+from web.social.utils import get_facebook_graph
 
 class DjangoBackend(Backend):
     def submit_elections(self, elections):
@@ -101,14 +103,59 @@ class DjangoBackend(Backend):
                 count += 1
         self.logger.info("%s: %d municipality trustee(s) saved" % count)
 
+    def _create_or_get_person(self, info):
+        args = {'first_name__iexact': info['first_name'], 'last_name__iexact': info['last_name'],
+                'municipality': info['municipality']}
+        try:
+            person = Person.objects.get(**args)
+            update_person = self.replace
+        except Person.DoesNotExist:
+            person = Person(first_name=info['first_name'], last_name=info['last_name'],
+                            municipality=info['municipality'])
+            update_person = True
+        if update_person:
+            if 'gender' in info:
+                person.gender = info['gender']
+            if 'party' in info:
+                person.party = self.party_dict.get(info['party'], None)
+            person.save()
+        return person
+
+    def _validate_fb_feed(self, candidate, feed_name):
+        person_name = unicode(candidate.person).encode('utf8')
+        feed_name = unicode(feed_name).encode('utf8')
+        self.logger.debug("%s: Validating FB feed %s" % (person_name, feed_name))
+        try:
+            graph = get_facebook_graph(feed_name)
+        except pyfaceb.exceptions.FBHTTPException as e:
+            print e
+            return
+        if not 'category' in graph:
+            self.logger.warning('%s: FB %s: not a page' % (person_name, feed_name))
+            return
+        origin_id = graph['id']
+        if CandidateFeed.objects.filter(type='FB', origin_id=origin_id).count():
+            self.logger.warning('%s: FB %s: already exists' % (person_name, feed_name))
+            return
+
+        try:
+            cf = CandidateFeed.objects.get(candidate=candidate, type='FB')
+            return
+        except CandidateFeed.DoesNotExist:
+            cf = CandidateFeed(candidate=candidate, type='FB')
+        cf.origin_id = origin_id
+        cf.account_name = graph.get('username', None)
+        cf.save()
+
     def submit_candidates(self, election, candidates):
         election = Election.objects.get(type=election['type'], year=election['year'])
         muni_dict = {}
         for muni in Municipality.objects.all():
             muni_dict[muni.pk] = muni
-        party_dict = {}
+
+        self.party_dict = {}
         for party in Party.objects.all():
-            party_dict[party.code] = party
+            self.party_dict[party.code] = party
 
         count = 0
         muni = None
@@ -116,33 +163,45 @@ class DjangoBackend(Backend):
             db.reset_queries()
             new_muni = muni_dict[int(c['municipality']['code'])]
             if new_muni != muni:
-                self.logger.debug("saving candidates from %s (updated so far %d)" % (new_muni.name, count))
+                self.logger.debug("saving candidates from %s" % new_muni.name)
             muni = new_muni
-            args = {'first_name': c['first_name'], 'last_name': c['last_name'],
-                    'municipality': muni}
-            try:
-                person = Person.objects.get(**args)
-                update_person = self.replace
-            except Person.DoesNotExist:
-                person = Person(**args)
-                update_person = True
-            if update_person:
-                person.gender = c['gender']
-                person.party = party_dict.get(c['party'], None)
-                person.save()
+            c['municipality'] = muni
 
-            args = {'person': person, 'election': election}
-            try:
-                candidate = Candidate.objects.get(**args)
-                if not self.replace:
-                    continue
-            except Candidate.DoesNotExist:
-                candidate = Candidate(**args)
-            candidate.municipality = muni
-            candidate.number = c['number']
-            candidate.profession = c['profession']
-            candidate.party_code = c['party']
-            candidate.save()
+            candidate = None
+            if 'number' in c:
+                try:
+                    candidate = Candidate.objects.get(municipality=muni, number=c['number'])
+                    # FIXME: check for name mismatches here
+                except Candidate.DoesNotExist:
+                    # FIXME: people with same names in same municipalities
+                    candidate = None
+            if not candidate:
+                person = self._create_or_get_person(c)
+                args = {'person': person, 'election': election}
+                try:
+                    candidate = Candidate.objects.get(**args)
+                    update_candidate = self.replace
+                except Candidate.DoesNotExist:
+                    candidate = Candidate(**args)
+                    update_candidate = True
+            else:
+                person = candidate.person
+                update_candidate = self.replace
+
+            if update_candidate:
+                candidate.municipality = muni
+                if 'number' in c:
+                    candidate.number = c['number']
+                if 'profession' in c:
+                    candidate.profession = c['profession']
+                if 'party_code' in c:
+                    candidate.party_code = c['party']
+                candidate.save()
+            if 'social' in c:
+                social = c['social']
+                if 'fb_feed' in social:
+                    self._validate_fb_feed(candidate, social['fb_feed'])
 
             count += 1
+
         self.logger.info("%d candidates updated" % count)
