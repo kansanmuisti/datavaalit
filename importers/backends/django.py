@@ -205,3 +205,76 @@ class DjangoBackend(Backend):
             count += 1
 
         self.logger.info("%d candidates updated" % count)
+        
+    def submit_prebudgets(self, expenses, expense_types):
+        
+        # First, populate ExpenseType table if not populated already
+        etypes = ExpenseType.objects.all()
+        # TODO: should there be an option for adding new types? Now it's 
+        # all-or-nothing. Could also be a check for provided expense types vs
+        # the ones already in the database
+        if not etypes:
+            for expense_type in expense_types:
+                etype = ExpenseType(type=expense_type['type'],
+                                    description=expense_type['description'])
+                etype.save()
+            self.logger.debug("%s expense types added" % len(expense_types))
+        else:
+            self.logger.debug("No expense types to add")
+                 
+        # Populate the cancdidate expenses reporting table
+        # TODO: for now, there is only 1 timestamp per record (i.e. candidate)
+        # and thus individual expense items cannot be compared on the basis of 
+        # timestamp. Items are not updated, timestamp is only used to record
+        # when the report was submitted  
+        
+        # TODO: mathing candidates to Person objects should be done in more 
+        # refined way. Expense reports have full name with potentially several
+        # first names. This information should be uptadet in Person. New records
+        # in Person are never created, queries will fail if person is not found.
+
+        for candidate_expenses in expenses:
+            
+            # Doest the candidate have any actual expenses (with numbers)
+            actual_expenses = set(candidate_expenses.keys()).intersection(expense_types.keys())
+            
+            # If there are no actual expenses, continue
+            if not actual_expenses:
+                continue
+            
+            # FIXME: for now, using just the 1st reported name. This is not a 
+            # good idea...
+            first_name = candidate_expenses['first_names'].split(' ')[0]
+            
+            args = {'first_name__iexact': first_name, 
+                    'last_name__iexact': candidate_expenses['last_name'],
+                    'municipality': candidate_expenses['municipality']}
+            try:
+                person = Person.objects.get(**args)
+                # Person.id IS Candidate.id
+                
+                # What expenses (if any) has person got in the Expense table
+                db_expenses = Expense.objects.get(candidate=person.id)
+                
+                if not db_expenses:
+                    continue
+                
+                for actual_expense in actual_expenses:
+                    # Get the id for the current expense type
+                    expense_id = Expense.objects.get(type=actual_expense).id
+                    
+                    # Is the expense id already recorded for this person
+                    if expense_id not in [id for id in db_expenses.expense_type]:
+                        # Create a new expense item
+                        new_expense = Expense(candidate=person.id,
+                                              expense_type=expense_id,
+                                              sum=candidate_expenses[actual_expense],
+                                              timestamp=candidate_expenses['timestamp'])
+                        new_expense.save()
+                
+            except Person.DoesNotExist:
+                person_str = "%s %s (%s)" % (candidate_expenses['first_names'],
+                                             candidate_expenses['last_name'],
+                                             candidate_expenses['municipality'])
+                self.logger.error("Person %s could not be found in table Person" % person_str)
+                continue

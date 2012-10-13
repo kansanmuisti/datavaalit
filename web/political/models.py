@@ -81,7 +81,8 @@ class CandidateFeed(Feed):
 class ExpenseType(models.Model):
     '''Models different types of expenses a campaign can have.
     '''
-    name = models.CharField(max_length=100)
+    type = models.CharField(max_length=25)
+    description = models.CharField(max_length=100)
     
 class Expense(models.Model):
     '''Models different election campaign expenses.

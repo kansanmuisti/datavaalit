@@ -51,6 +51,9 @@ parser.add_option("--replace", help="replace existing data in DB", dest="replace
                   action="store_true")
 parser.add_option("-v", "--verbose", help="verbose output", dest="verbose",
                   action="store_true")
+parser.add_option("--disable-cache", help="Disable file cache", dest="cache",
+                  action="store_false", default=True)
+
 
 (options, args) = parser.parse_args()
 
@@ -77,8 +80,14 @@ if options.imports:
             exit(1)
 
     http = HttpFetcher()
-    http.set_cache_dir(".cache")
-    requests_cache.configure("importers")
+
+    if options.cache:
+        cache_dir = ".cache"
+        http.set_cache_dir(cache_dir)
+        requests_cache.configure("importers")
+    else:
+        
+        http.set_cache_dir("")
 
     if options.django:
         from importers.backends.django import DjangoBackend
@@ -86,9 +95,21 @@ if options.imports:
         # We need to start logging after Django initializes
         # because Django can be configured to reset logging.
         logger = init_logging(debug=options.verbose)
+        
+        if options.cache:
+            logger.debug("Setting up cache in %s" % cache_dir)
+        else:
+            logger.debug("Cache disabled")
+        
         backend = DjangoBackend(logger, replace=options.replace)
     else:
         logger = init_logging(debug=options.verbose)
+        
+        if options.cache:
+            logger.debug("Setting up cache in %s" % cache_dir)
+        else:
+            logger.debug("Cache disabled")
+        
         backend = Backend(logger, replace=options.replace)
 
     for imp_class in importer_list:

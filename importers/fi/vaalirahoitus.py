@@ -13,13 +13,29 @@ class VaalirahoitusImporter(Importer):
     
     def import_prebudgets(self):
         
+        # Create the necessary field mappings for different expense types
+        EXPENSE_TYPES = [
+             {'type': 'total',         'index': 7},
+             {'type': 'printed_media', 'index': 8},
+             {'type': 'radio',         'index': 9},
+             {'type': 'television',    'index': 10},
+             {'type': 'web',           'index': 11},
+             {'type': 'other_media',   'index': 12},
+             {'type': 'outdoors_ads',  'index': 13},
+             {'type': 'print_ads',     'index': 14},
+             {'type': 'planning',      'index': 15},
+             {'type': 'rallies',       'index': 16},
+             {'type': 'paid_income',   'index': 17},
+             {'type': 'other',         'index': 18}
+        ]
+        
         URL = "http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia/raportit/Tietoaineistot/E_EI_KV2012.csv"
         
-        candidates_odict = OrderedDict()
+        # A list to hold reported expenses
+        expenses = []
         
         self.logger.info("Fetching URL %s" % URL)
         
-        # QUESTION: self.name (prefix) related to cache operations?
         s = self.http.open_url(URL, self.name)
         
         lines = [l for l in s.split('\n')]
@@ -28,8 +44,10 @@ class VaalirahoitusImporter(Importer):
         # the read-in
         reader = csv.reader(lines, delimiter=';')
         
-        # Skip the header
-        reader.next()
+        # Fill in the field mapping descriptors
+        header = reader.next()
+        for expense_type in EXPENSE_TYPES:
+            expense_type['description'] = header[expense_type['index']].decode('utf-8').strip("'")
         
         for row in reader:
             
@@ -44,18 +62,27 @@ class VaalirahoitusImporter(Importer):
             # Replaces commas with dots in decimal delimiters
             row = [x.replace(",", ".") for x in row]
             
-            # TODO: implement name parsing (several names and canonical name)
+            # Create another ordered dict to hold the expenses of an individual
+            # candidate
+            candidate_expenses = OrderedDict()
             
+            # TODO: implement name parsing (several names and canonical name)
             # first_names = row[0], last_name = row[1]
-            candidate_name = row[0].decode('utf8') + ' ' + row[1].decode('utf8')
+            candidate_expenses['first_names'] = row[0].decode('utf8')
+            candidate_expenses['last_name'] = row[1].decode('utf8')
+            candidate_name = candidate_expenses['first_names'] + ' ' + candidate_expenses['last_name']
             
             # Timestamp is used to record information on when information is 
             # recorded
             now = datetime.datetime.now().strftime('%d-%b-%Y %H:%M')
             
-            def to_float(x):
+            def to_float(x, tag=candidate_name):
                 '''Tries to coerce euro sums into floats.
                 '''
+                if tag:
+                    msg = " (%s)" % tag
+                else:
+                    msg = ""
                 try:
                     if x != '':
                         fx = float(x)
@@ -66,23 +93,21 @@ class VaalirahoitusImporter(Importer):
                     else:
                         return(None)
                 except ValueError, e:
-                    self.logger.warning("Bad value for spent euros: %s" % e)
+                    self.logger.warning("Bad value for euros%s: %s" % (msg, e))
             
-            expenses = OrderedDict()
+            # Voting district/municipality is needed in order to identidy 
+            # candidate. TODO: should the field mapping be done in some other
+            # way? NOTE: key 'municipality' is ok here, but could be something
+            # else in some other types of elections
+            candidate_expenses['municipality'] = row[3]
             
-            expenses['printed_media'] = (to_float(row[8]), now)
-            expenses['radio'] = (to_float(row[9]), now)
-            expenses['television'] = (to_float(row[10]), now)
-            expenses['web'] = (to_float(row[11]), now)
-            expenses['other_media'] = (to_float(row[12]), now)
-            expenses['outdoors_adds'] = (to_float(row[13]), now)
-            expenses['print_adds'] = (to_float(row[14]), now)
-            expenses['planning'] = (to_float(row[15]), now)
-            expenses['rallies'] = (to_float(row[16]), now)
-            expenses['paid_income'] = (to_float(row[17]), now)
-            expenses['other'] = (to_float(row[18]), now)
-            expenses['total'] = (to_float(row[7]), now)
+            for expense_type in EXPENSE_TYPES:
+                candidate_expenses[expense_type['type']] = to_float(row[expense_type['index']])
             
-            candidates_odict[candidate_name] = expenses
+            candidate_expenses['timestamp'] = now
+            
+            expenses.append(candidate_expenses)
         
-        self.backend.submit_prebudgets(candidates_odict)
+        # EXPENSE_TYPES is also returned; backend may have to populate e.g. a 
+        # DB table with the information
+        self.backend.submit_prebudgets(expenses, EXPENSE_TYPES)

@@ -28,7 +28,7 @@ class Backend(object):
         for p in parties:
             pprint.pprint(p)
             
-    def submit_prebudgets(self, expenses):
+    def submit_prebudgets(self, expenses, expense_types):
         '''Expenses argument is an OrderedDict with dicts with candidate name 
         as keys and detailed expenses as nested dict pairs.
         
@@ -38,23 +38,27 @@ class Backend(object):
          
         '''
         print "Candidate expenses:"
-        for candidate, expense_items in expenses.iteritems():
+        n_expenses = len(expenses)
+        for candidate_expenses in expenses:
             any_expenses = False
-            print("%s:" % (candidate))
-            for item in expense_items:
-                
-                # Remember, expense_item is a tuple (item, (sum, timstamp))
-                if expense_items[item][0] and expense_items[item][0] > 0.0: 
-                    if item == 'total':
+            print("%s:" % (candidate_expenses.pop('first_names') + ' ' + candidate_expenses.pop('last_name')))
+            print("  Municipality: %s" % candidate_expenses.pop('municipality'))
+            print("  Submitted: %s" % candidate_expenses.pop('timestamp'))
+            for key, value in candidate_expenses.iteritems():
+
+                if key and value > 0.0: 
+                    print("  %s: %s euros" % (key, value))
+                    if key == 'total':
                         print(' ')
-                    print("  %s: %s euros (%s)" % (item, expense_items[item][0], expense_items[item][1]))
                     any_expenses = True
                 if not any_expenses:
                     print("  No reported expenses")
                     break
                 
             print(' ')
-
+            
+        print("Total number of expenses reported: %s" % n_expenses)
+        
 class Importer(object):
     def __init__(self, data_path, http, logger, backend, replace=False):
         self.data_path = data_path
