@@ -44,12 +44,13 @@ class VaalitImporter(Importer):
         self.backend.submit_parties(party_list)
 
     def import_candidates(self):
+        election = {'type': 'muni', 'year': 2012}
         URL_BASE="http://192.49.229.35/K2012/s/ehd_listat/%s_%02d.csv"
-        candidate_list = []
-        for i in range(1, 15):
+        for i in range(1, 15 + 1):
             # Skip Ahvenanmaa
             if i == 5:
                 continue
+            candidate_list = []
             url = URL_BASE % ("ehd", i)
             self.logger.info("Fetching URL %s" % url)
             s = self.http.open_url(url, self.name)
@@ -69,7 +70,4 @@ class VaalitImporter(Importer):
                 cand['profession'] = row[19]
                 cand['number'] = int(row[12])
                 candidate_list.append(cand)
-            candidate_list.append(cand)
-
-        election = {'type': 'muni', 'year': 2012}
-        self.backend.submit_candidates(election, candidate_list)
+            self.backend.submit_candidates(election, candidate_list)

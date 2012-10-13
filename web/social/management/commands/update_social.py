@@ -1,16 +1,30 @@
+import logging
 import time
 import datetime
 import calendar
 import email.utils
+import urllib
+import urlparse
+import pprint
+import pyfaceb
+import dateutil.parser
+import dateutil.tz
 
 from twython import Twython
 from pyfaceb import FBGraph
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 from django.db.models import Q
 from django.conf import settings
 from social.models import Feed, Update, ApiToken
-from social.api import get_facebook_token
+from social.utils import get_facebook_token
+
+RAPID_UPDATE_TIME = datetime.timedelta(hours=2)
+REFRESH_TIME = datetime.timedelta(weeks=2)
+
+class UpdateError(Exception):
+    pass
 
 class Command(BaseCommand):
     help = "Update social media feeds"
@@ -77,32 +91,143 @@ class Command(BaseCommand):
         for feed in feed_list:
             self.process_twitter_timeline(twitter, feed)
 
-    def process_facebook_timeline(self, fbg, feed):
-        print "%s: %s" % (feed.account_name, feed.origin_id)
-        import pprint
+    def set_field_with_len(self, update, field_name, text):
+        max_length = update.__class__._meta.get_field(field_name).max_length
+        if text and len(text) > max_length:
+            self.logger.warning("Truncating FB update %s field '%s' (length %d)" % (
+                update.origin_id, field_name, len(text)))
+            text = text[0:max_length-3]
+            text += "..."
+        setattr(update, field_name, text)
 
+    @transaction.commit_on_success
+    def process_facebook_timeline(self, fbg, feed, newer_than=0, full_update=False):
+        self.logger.info('Processing feed %s: %s' % (feed.account_name, feed.origin_id))
+
+        # First update the feed itself
+        url = '%s&fields=picture,likes,about' % feed.origin_id
+        try:
+            feed_info = fbg.get(url)
+        except pyfaceb.exceptions.FBHTTPException as e:
+            self.logger.error(e)
+            feed.update_error_count += 1
+            feed.save()
+            # FIXME: Doesn't work
+            raise UpdateError()
+
+        feed.picture = feed_info.get('picture', {}).get('data', {}).get('url', None)
+        feed.interest = feed_info.get('likes', None)
+
+        if full_update:
+            count = 100
+        else:
+            count = 20
+        url = '%s/posts&limit=%d' % (feed.origin_id, count)
         while True:
-            g = fbg.get('%s/posts' % feed.origin_id)
-            print g['paging']
+            self.logger.info('Fetching %s' % url)
+            try:
+                g = fbg.get(url)
+            except pyfaceb.exceptions.FBHTTPException as e:
+                self.logger.error(e)
+                feed.update_error_count += 1
+                feed.save()
+                raise UpdateError()
+            found = False
             for post in g['data']:
-                if 'comments' in post:
-                    del post['comments']
-                if 'likes' in post:
-                    del post['likes']
-                pprint.pprint(post)
-                print
-            exit(1)
+                # Sanity check
+                assert post['from']['id'] == feed.origin_id
+                if post['type'] in ('question', 'swf', 'music', 'offer'):
+                    # We skip these updates for now.
+                    continue
+                if post['type'] == 'status' and 'message' not in post:
+                    # We're not interested in status updates with no content.
+                    continue
+                try:
+                    upd = Update.objects.get(feed=feed, origin_id=post['id'])
+                    found = True
+                    if not full_update:
+                        continue
+                except Update.DoesNotExist:
+                    upd = Update(feed=feed, origin_id=post['id'])
+                    created = True
+
+                utc = dateutil.parser.parse(post['created_time'])
+                upd.created_time = utc.astimezone(dateutil.tz.tzlocal())
+                self.set_field_with_len(upd, 'text', post.get('message', None))
+                upd.link = post.get('link', None)
+                upd.picture = post.get('picture', None)
+                self.set_field_with_len(upd, 'share_title', post.get('name', None))
+                self.set_field_with_len(upd, 'share_caption', post.get('caption', None))
+                self.set_field_with_len(upd, 'share_description', post.get('description', None))
+                if upd.picture and len(upd.picture) > 250:
+                    self.logger.warning("%s: Removing too long picture link" % upd.origin_id)
+                    upd.picture = None
+                if upd.link and len(upd.link) > 250:
+                    self.logger.warning("%s: Removing too long link" % upd.origin_id)
+                    upd.link = None
+                sub_type = post.get('status_type', None)
+                if sub_type:
+                    upd.sub_type = sub_type
+                else:
+                    upd.sub_type = None
+                upd.interest = post.get('likes', {}).get('count', None)
+                if post['type'] == 'link':
+                    upd.type = 'link'
+                    if not upd.link:
+                        self.logger.warning("FB %s: No link given for 'link' update" % post['id'])
+                elif post['type'] == 'photo':
+                    upd.type = 'photo'
+                    assert upd.link
+                    assert upd.picture
+                elif post['type'] == 'status':
+                    upd.type = 'status'
+                elif post['type'] == 'video':
+                    upd.type = 'video'
+                    if not upd.link:
+                        # Fall back to the 'source' attribute
+                        upd.link = post.get('source', None)
+                        if not upd.link:
+                            pprint.pprint(post)
+                            raise Exception("%s: No link for 'video 'update" % post['id'])
+                    assert upd.link
+                else:
+                    pprint.pprint(post)
+                    raise Exception("Unknown FB update type: %s" % post['type'])
+                upd.save()
+
+            if not 'paging' in g:
+                break
+            next_args = urlparse.parse_qs(urlparse.urlparse(g['paging']['next']).query)
+            until = int(next_args['until'][0])
+            # If we didn't have any of the updates, get a bigger batch next
+            # time.
+            if not found:
+                count = 100
+            elif not full_update:
+                # If at least some of the updates were in our DB already,
+                # the feed is up-to-date.
+                break
+            url = "%s/posts&limit=%d&until=%d" % (feed.origin_id, count, until)
+        feed.update_error_count = 0
+        feed.save()
 
     def update_facebook(self):
+        import requests_cache
+        requests_cache.configure("update-social")
+
         feed_list = Feed.objects.filter(type='FB')
         # check only feeds that haven't been updated for two hours
-        update_dt = datetime.datetime.now() - datetime.timedelta(hours=2)
+        update_dt = datetime.datetime.now() - RAPID_UPDATE_TIME
         token = get_facebook_token()
         fbg = FBGraph(token)
         feed_list = feed_list.filter(Q(last_update__lt=update_dt) | Q(last_update__isnull=True))
         for feed in feed_list:
-            self.process_facebook_timeline(fbg, feed)
+            try:
+                self.process_facebook_timeline(fbg, feed)
+            except UpdateError:
+                pass
 
     def handle(self, *args, **options):
+        self.logger = logging.getLogger(__name__)
         self.update_twitter()
         self.update_facebook()

@@ -1,6 +1,8 @@
 from django.template import RequestContext
 from django.shortcuts import render_to_response
 from stats.models import *
+from geo.models import *
+from political.models import *
 
 def municipality_border_test(request):
     all_munis = Municipality.objects.all()
