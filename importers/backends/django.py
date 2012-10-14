@@ -194,8 +194,9 @@ class DjangoBackend(Backend):
                     candidate.number = c['number']
                 if 'profession' in c:
                     candidate.profession = c['profession']
-                if 'party_code' in c:
+                if 'party' in c:
                     candidate.party_code = c['party']
+                    candidate.party = self.party_dict.get(c['party'], None)
                 candidate.save()
             if 'social' in c:
                 social = c['social']
