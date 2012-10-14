@@ -34,6 +34,8 @@ class CandidateResource(ModelResource):
     person = fields.ToOneField('political.api.PersonResource', 'person')
     municipality = fields.ToOneField('geo.api.MunicipalityResource',
                                      'municipality', null=True)
+    party = fields.ToOneField('political.api.PartyResource', 'party')
+
     def dehydrate(self, bundle):
         person = bundle.obj.person
         bundle.data['person_name'] = unicode(person)
@@ -46,6 +48,7 @@ class CandidateResource(ModelResource):
         filtering = {
             "municipality": ('exact', 'in'),
             "election": ('exact', 'in'),
+            "party": ('exact', 'in'),
         }
 
 

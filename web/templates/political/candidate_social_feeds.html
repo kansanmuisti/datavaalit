@@ -158,15 +158,24 @@ AppView = Backbone.View.extend
     @.update_list.on 'add', @.add_one, @
     @.update_list.on 'reset', @.add_all, @
   add_one: (update) ->
-    console.log "add one", update
     update_view = new SocialUpdateView {model: update}
-    console.log @
     @.$('#some-list').append update_view.render()
   set_municipality: (muni_id) ->
-    @.reset_update_list
-      candidate__municipality: muni_id
+    if not muni_id
+      delete @.update_list.filters.candidate__municipality
+      args = {}
+    else
+      args = {candidate__municipality: muni_id}
+    @.reset_update_list args
+
+  set_party: (party_id) ->
+    if not party_id
+      delete @.update_list.filters.candidate__party
+      args = {}
+    else
+      args = {candidate__party: party_id}
+    @.reset_update_list args
   add_all: ->
-    console.log "add all"
     el = @.$('#some-list')
     el.html('')
     if @.update_list.length == 0
@@ -174,7 +183,7 @@ AppView = Backbone.View.extend
     else
       @.update_list.each @.add_one, @
   reset_update_list: (filters) ->
-    console.log "reset update list"
+    delete @.update_list.filters.offset
     _.extend @.update_list.filters, filters
     @.update_list.fetch()
 
@@ -210,10 +219,15 @@ jQuery ->
 
   municipalities = {}
   selected_municipality = 91
+  selected_party = null
 
-  switch_muni = (muni_id) ->
+  set_muni = (muni_id) ->
     selected_municipality = muni_id
     app_view.set_municipality muni_id
+
+  set_party = (party_id) ->
+    selected_party = party_id
+    app_view.set_party party_id
     
   fetch_munis = ->
     api_fetch "municipality",
@@ -230,21 +244,47 @@ jQuery ->
           el = $("<option #{ selected }value=#{ muni.id }>#{ muni.name }</option>")
           el_list.append el
         $("#municipality-chooser").trigger "liszt:updated"
-        switch_muni selected_municipality
+        set_muni selected_municipality
 
-  $("#municipality-chooser").chosen().change((ev, args) ->
-    muni_id = parseInt(args.selected)
-    switch_muni muni_id
+  fetch_parties = ->
+    api_fetch "party",
+      limit: 1000,
+      all: true,
+      callback: (objs) ->
+        party_list = _.sortBy objs, (obj) ->
+          return obj.abbrev
+        el_list = $("#party-chooser")
+        for party in party_list
+          if party.id == selected_party
+            selected = "selected "
+          else
+            selected = ""
+          el = $("<option #{ selected }value=#{ party.id }>#{ party.abbrev }</option>")
+          el_list.append el
+        $("#party-chooser").trigger "liszt:updated"
+
+  chosen_args = {allow_single_deselect: true}
+  $("#municipality-chooser").chosen(chosen_args).change((ev, args) ->
+    if not args
+      muni_id = null
+    else
+      muni_id = parseInt(args.selected)
+    set_muni muni_id
   )
-  $("#party-chooser").chosen().change((ev, args) ->
+  $("#party-chooser").chosen(chosen_args).change((ev, args) ->
+    if not args
+      party_id = null
+    else
+      party_id = parseInt(args.selected)
+    set_party party_id
   )
 
   fetch_munis()
+  fetch_parties()
 
   $(window).scroll ->
     w = $(window)
     if w.scrollTop() + w.height() == $(document).height()
-      console.log "scroll bottom"
       app_view.update_list.fetchNext()
   $("#technical-details-button").click ->
     $("#technical-details-button").hide()
@@ -267,11 +307,13 @@ jQuery ->
   </div>
   <div class="span8" style="margin-top: 20px; margin-bottom: 20px; clear: both">
     <select data-placeholder="{% trans "Choose a municipality" %}" id="municipality-chooser">
+      <option value=""></option>
     </select>
     <select data-placeholder="{% trans "Choose a party" %}" id="party-chooser">
+      <option value=""></option>
     </select>
   </div>
-  <div id="some-updates">
+  <div style="clear: both;" id="some-updates">
     <ul id="some-list" class="unstyled">
     </ul>
   </div>
