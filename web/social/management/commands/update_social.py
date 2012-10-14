@@ -162,7 +162,6 @@ class Command(BaseCommand):
                 if upd.picture and len(upd.picture) > self._get_field_max_len(upd, 'picture'):
                     self.logger.warning("%s: Removing too long picture link" % upd.origin_id)
                     upd.picture = None
-                print self._get_field_max_len(upd, 'share_link')
                 if upd.share_link and len(upd.share_link) > self._get_field_max_len(upd, 'share_link'):
                     self.logger.warning("%s: Removing too long link" % upd.origin_id)
                     upd.share_link = None
@@ -190,11 +189,12 @@ class Command(BaseCommand):
                         if not upd.share_link:
                             pprint.pprint(post)
                             raise Exception("%s: No link for 'video 'update" % post['id'])
-                    assert upd.share_link
+                        if upd.share_link and len(upd.share_link) > self._get_field_max_len(upd, 'share_link'):
+                            self.logger.warning("%s: Removing too long link" % upd.origin_id)
+                            upd.share_link = None
                 else:
                     pprint.pprint(post)
                     raise Exception("Unknown FB update type: %s" % post['type'])
-                print vars(upd)
                 upd.save()
 
             if not 'paging' in g:
