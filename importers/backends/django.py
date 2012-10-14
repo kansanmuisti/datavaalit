@@ -236,20 +236,30 @@ class DjangoBackend(Backend):
         for candidate_expenses in expenses:
             
             # Doest the candidate have any actual expenses (with numbers)
-            actual_expenses = set(candidate_expenses.keys()).intersection(expense_types.keys())
+            types = [etype['type'] for etype in expense_types]
+            actual_expenses = set(candidate_expenses.keys()).intersection(types)
             
             # If there are no actual expenses, continue
             if not actual_expenses:
                 continue
             
-            # FIXME: for now, using just the 1st reported name. This is not a 
-            # good idea...
-            first_name = candidate_expenses['first_names'].split(' ')[0]
-            
-            args = {'first_name__iexact': first_name, 
-                    'last_name__iexact': candidate_expenses['last_name'],
-                    'municipality': candidate_expenses['municipality']}
             try:
+                # Construct a String to describe person at hand (candidate)
+                person_str = "%s %s (%s)" % (candidate_expenses['first_names'].encode('utf8') ,
+                                             candidate_expenses['last_name'].encode('utf8') ,
+                                             candidate_expenses['municipality'] )
+                
+                # FIXME: for now, using just the 1st reported name. This is not a 
+                # good idea...
+                first_name = candidate_expenses['first_names'].split(' ')[0]
+                
+                # Municipality given as String, do a lookup for an integer id 
+                municipality_id = Municipality.objects.get(name=candidate_expenses['municipality']).id
+                
+                args = {'first_name__iexact': first_name, 
+                        'last_name__iexact': candidate_expenses['last_name'],
+                        'municipality': municipality_id}
+                
                 person = Person.objects.get(**args)
                 # Person.id IS Candidate.id
                 
@@ -272,9 +282,11 @@ class DjangoBackend(Backend):
                                               timestamp=candidate_expenses['timestamp'])
                         new_expense.save()
                 
+            except Municipality.DoesNotExist:
+                self.logger.error("Candidate %s: %s is not a known municipality" % (person_str,
+                                                                                    candidate_expenses['municipality']))
+                continue
+            
             except Person.DoesNotExist:
-                person_str = "%s %s (%s)" % (candidate_expenses['first_names'],
-                                             candidate_expenses['last_name'],
-                                             candidate_expenses['municipality'])
                 self.logger.error("Person %s could not be found in table Person" % person_str)
                 continue

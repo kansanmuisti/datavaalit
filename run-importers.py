@@ -20,7 +20,7 @@ def init_logging(debug=False):
         ch.setLevel(logging.DEBUG)
     else:
         ch.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s - %(message)s")
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     ch.setFormatter(formatter)
     logger.addHandler(ch)
     logger.propagate = 0
