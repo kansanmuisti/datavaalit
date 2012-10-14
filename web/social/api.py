@@ -18,7 +18,7 @@ class FeedResource(ModelResource):
 class UpdateResource(ModelResource):
     feed = fields.ToOneField('social.api.FeedResource', 'feed')
     class Meta:
-        queryset = Update.objects.all()
+        queryset = Update.objects.all().order_by('-created_time')
         resource_name = 'social_update'
         filtering = {
             'feed': ALL_WITH_RELATIONS,

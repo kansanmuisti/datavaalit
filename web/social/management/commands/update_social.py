@@ -160,10 +160,10 @@ class Command(BaseCommand):
                 self._set_field_with_len(upd, 'share_caption', post.get('caption', None))
                 self._set_field_with_len(upd, 'share_description', post.get('description', None))
                 if upd.picture and len(upd.picture) > self._get_field_max_len(upd, 'picture'):
-                    self.logger.warning("%s: Removing too long picture link" % upd.origin_id)
+                    self.logger.warning("%s: Removing too long (%d) picture link" % (upd.origin_id, len(upd.picture)))
                     upd.picture = None
                 if upd.share_link and len(upd.share_link) > self._get_field_max_len(upd, 'share_link'):
-                    self.logger.warning("%s: Removing too long link" % upd.origin_id)
+                    self.logger.warning("%s: Removing too long (%d) link" % (upd.origin_id, len(upd.share_link)))
                     upd.share_link = None
                 sub_type = post.get('status_type', None)
                 if sub_type:
