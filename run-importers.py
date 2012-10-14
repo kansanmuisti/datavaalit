@@ -16,13 +16,17 @@ def init_logging(debug=False):
     logger = logging.getLogger("importer")
     logger.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
+    fh = logging.FileHandler('datavaalit.log')
+    fh.setLevel(logging.DEBUG)
     if debug:
         ch.setLevel(logging.DEBUG)
     else:
         ch.setLevel(logging.INFO)
     formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
     logger.addHandler(ch)
+    logger.addHandler(fh)
     logger.propagate = 0
     return logger
 

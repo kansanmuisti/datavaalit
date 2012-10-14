@@ -234,6 +234,7 @@ class DjangoBackend(Backend):
         # in Person are never created, queries will fail if person is not found.
         
         candidate_counter = 0
+        candidate_updates_counter = 0
         expense_counter = 0
 
         for candidate_expenses in expenses:
@@ -311,8 +312,9 @@ class DjangoBackend(Backend):
                         expense_counter += 1
                         updated = True
                         
+                candidate_counter += 1
                 if updated:
-                    candidate_counter += 1 
+                    candidate_updates_counter += 1 
                 
             except Municipality.DoesNotExist:
                 self.logger.warning("Candidate %s: %s is not a known municipality" % (person_str,
@@ -323,8 +325,12 @@ class DjangoBackend(Backend):
                 self.logger.warning("Person %s could not be found in table Person" % person_str)
                 continue
         
-        # How many candidates could not be recorded
-        missing = len(expenses) - candidate_counter
+        
         self.logger.info("Added %s expenses for %s candidates" % (expense_counter,
-                                                                          candidate_counter))
-        self.logger.info("Could not match names for %s candidates" % missing)
+                                                                          candidate_updates_counter))
+        not_updated = len(expenses) - candidate_updates_counter
+        if not_updated > 0:
+            self.logger.info("%s candidates not updated" % not_updated)
+        missing = len(expenses) - (candidate_counter - candidate_updates_counter)
+        if missing > 0:
+            self.logger.info("Could not match names for %s candidates" % missing)
