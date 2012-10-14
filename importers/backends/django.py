@@ -232,8 +232,16 @@ class DjangoBackend(Backend):
         # refined way. Expense reports have full name with potentially several
         # first names. This information should be uptadet in Person. New records
         # in Person are never created, queries will fail if person is not found.
+        
+        candidate_counter = 0
+        expense_counter = 0
 
         for candidate_expenses in expenses:
+            
+            # Keep track if the candidate expenses were updated
+            updated = False
+            
+            db.reset_queries()
             
             # Doest the candidate have any actual expenses (with numbers)
             types = [etype['type'] for etype in expense_types]
@@ -249,44 +257,74 @@ class DjangoBackend(Backend):
                                              candidate_expenses['last_name'].encode('utf8') ,
                                              candidate_expenses['municipality'] )
                 
-                # FIXME: for now, using just the 1st reported name. This is not a 
-                # good idea...
-                first_name = candidate_expenses['first_names'].split(' ')[0]
-                
-                # Municipality given as String, do a lookup for an integer id 
+                # Municipality given as String, do a lookup for an integer id.
+                # Needed to identify the candidate
                 municipality_id = Municipality.objects.get(name=candidate_expenses['municipality']).id
                 
-                args = {'first_name__iexact': first_name, 
-                        'last_name__iexact': candidate_expenses['last_name'],
-                        'municipality': municipality_id}
+                # Since expense reports can have several firstnames, try 
+                # following names as will if the 1st doesn't match 
+                # TODO: heuristics here could be done smarter
+                first_names = candidate_expenses['first_names'].split(' ')
                 
-                person = Person.objects.get(**args)
-                # Person.id IS Candidate.id
+                found = False
+                
+                for first_name in first_names:
+                    
+                    args = {'first_name__iexact': first_name, 
+                            'last_name__iexact': candidate_expenses['last_name'],
+                            'municipality': municipality_id}
+                    
+                    try:
+                        # TODO: is there a more concise way of doing this?
+                        person = Person.objects.get(**args)
+                        candidate = Candidate.objects.get(person=person)
+                        self.logger.debug("Found person %s with first name: %s." % (person_str, first_name.encode('utf-8')))
+                        found = True
+                        break
+                    except Person.DoesNotExist:
+                        self.logger.debug("Could not find person %s with first name: %s." % (person_str, first_name.encode('utf-8')))
+                        continue
+                
+                if not found:
+                    self.logger.warning("Could not find person %s in table Person" % person_str)   
                 
                 # What expenses (if any) has person got in the Expense table
-                db_expenses = Expense.objects.get(candidate=person.id)
-                
-                if not db_expenses:
-                    continue
+                db_expenses = Expense.objects.filter(candidate=candidate)
                 
                 for actual_expense in actual_expenses:
                     # Get the id for the current expense type
-                    expense_id = Expense.objects.get(type=actual_expense).id
+                    expense = ExpenseType.objects.get(type=actual_expense)
                     
                     # Is the expense id already recorded for this person
-                    if expense_id not in [id for id in db_expenses.expense_type]:
+                    expenses_in_db = [_expense.expense_type.id for _expense in db_expenses]
+                    
+                    if not db_expenses or expense.id not in expenses_in_db:
                         # Create a new expense item
-                        new_expense = Expense(candidate=person.id,
-                                              expense_type=expense_id,
-                                              sum=candidate_expenses[actual_expense],
-                                              timestamp=candidate_expenses['timestamp'])
+                        sum_value = candidate_expenses[actual_expense]
+                        new_expense = Expense(candidate=candidate,
+                                              expense_type=expense,
+                                              sum=sum_value,
+                                              time_stamp=candidate_expenses['timestamp'])
                         new_expense.save()
+                        msg = "New expense for %s: %s = %s" % (person_str, actual_expense, sum_value)
+                        self.logger.debug(msg)
+                        expense_counter += 1
+                        updated = True
+                        
+                if updated:
+                    candidate_counter += 1 
                 
             except Municipality.DoesNotExist:
-                self.logger.error("Candidate %s: %s is not a known municipality" % (person_str,
+                self.logger.warning("Candidate %s: %s is not a known municipality" % (person_str,
                                                                                     candidate_expenses['municipality']))
                 continue
             
             except Person.DoesNotExist:
-                self.logger.error("Person %s could not be found in table Person" % person_str)
+                self.logger.warning("Person %s could not be found in table Person" % person_str)
                 continue
+        
+        # How many candidates could not be recorded
+        missing = len(expenses) - candidate_counter
+        self.logger.info("Added %s expenses for %s candidates" % (expense_counter,
+                                                                          candidate_counter))
+        self.logger.info("Could not match names for %s candidates" % missing)

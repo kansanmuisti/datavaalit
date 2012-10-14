@@ -73,8 +73,8 @@ class VaalirahoitusImporter(Importer):
             candidate_name = candidate_expenses['first_names'] + ' ' + candidate_expenses['last_name']
             
             # Timestamp is used to record information on when information is 
-            # recorded
-            now = datetime.datetime.now().strftime('%d-%b-%Y %H:%M')
+            # recorded. Django DateTimeField requires YYYY-MM-DD HH:MM
+            now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
             
             def to_float(x, tag=candidate_name):
                 '''Tries to coerce euro sums into floats.
@@ -94,6 +94,7 @@ class VaalirahoitusImporter(Importer):
                         return(None)
                 except ValueError, e:
                     self.logger.warning("Bad value for euros%s: %s" % (msg, e))
+                    return(None)
             
             # Voting district/municipality is needed in order to identidy 
             # candidate. TODO: should the field mapping be done in some other
@@ -102,7 +103,11 @@ class VaalirahoitusImporter(Importer):
             candidate_expenses['municipality'] = row[3]
             
             for expense_type in EXPENSE_TYPES:
-                candidate_expenses[expense_type['type']] = to_float(row[expense_type['index']])
+                # Only record the expense type if there is a value associated 
+                # to it
+                value = to_float(row[expense_type['index']])
+                if value:
+                    candidate_expenses[expense_type['type']] = value
             
             candidate_expenses['timestamp'] = now
             

@@ -90,4 +90,6 @@ class Expense(models.Model):
 
     candidate = models.ForeignKey(Candidate, db_index=True)
     expense_type = models.ForeignKey(ExpenseType)
+    sum = models.FloatField()
+    time_stamp = models.DateTimeField()
     
