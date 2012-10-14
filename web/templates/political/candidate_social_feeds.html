@@ -72,6 +72,10 @@
 	}
 }
 
+time {
+	font-weight: bold;
+}
+
 </style>
 {% endcompress %}
 {% endblock %}
@@ -290,6 +294,9 @@ jQuery ->
     $("#technical-details-button").hide()
     $("#technical-details").show()
     return false
+  $("time").each ->
+    m_time = moment($(this).attr('datetime'))
+    $(this).html(m_time.from())
 </script>
 {% endcompress %}
 {% endblock %}
@@ -299,6 +306,7 @@ jQuery ->
   <div class="span8" style="overflow: hidden; clear: both">
     <p>Tällä sivulla voit selata vuoden 2012 kunnallisvaaliehdokkaiden sosiaalisen median
   päivityksiä. Voit rajata tarkastelun kunnan ja puolueen perusteella. Ehdokkaiden profiilien osoitteet on saatu <a href="https://vaalikone.yle.fi/">Ylen vaalikoneesta</a>.</p>
+    <p>Mukana on <strong>{{ update_count }}</strong> päivitystä <strong>{{ feed_count }}</strong> ehdokkaalta. Tietoja on päivitetty viimeksi <time datetime="{{ last_update|date:"c" }}">{{ last_update }}</time>.</p>
     <a id="technical-details-button" href="#">Lue lisää palvelun teknisistä yksityiskohdista »</a>
     <div id="technical-details" class="hide">
       <p>Sivu käyttää Datavaalit-projektin tietokantaa REST-rajapinnan yli.</p>
