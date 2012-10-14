@@ -85,6 +85,7 @@ time {
 <script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
 <script type="text/javascript" src="{% static "js/backbone.js" %}"></script>
 <script type="text/javascript" src="{% static "js/backbone-tastypie.js" %}"></script>
+<script type="text/javascript" src="{% static "js/jstorage.js" %}"></script>
 {% endcompress %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/moment.js" %}"></script>
@@ -222,15 +223,18 @@ jQuery ->
   app_view = new AppView
 
   municipalities = {}
-  selected_municipality = 91
-  selected_party = null
+  
+  selected_municipality = $.jStorage.get('csf-muni', 91)
+  selected_party = $.jStorage.get('csf-party', null)
 
   set_muni = (muni_id) ->
     selected_municipality = muni_id
+    $.jStorage.set("csf-muni", muni_id)
     app_view.set_municipality muni_id
 
   set_party = (party_id) ->
     selected_party = party_id
+    $.jStorage.set("csf-party", party_id)
     app_view.set_party party_id
     
   fetch_munis = ->
