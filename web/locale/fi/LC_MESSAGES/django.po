@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-09-30 22:57+0300\n"
+"POT-Creation-Date: 2012-10-14 22:09+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -71,12 +71,13 @@ msgid "Candidates for municipality election 2012"
 msgstr "Kunnallisvaaliehdokkaat 2012"
 
 #: templates/candidates.html:137
+#: templates/political/candidate_social_feeds.html:309
 msgid "Choose a municipality"
 msgstr "Valitse kunta"
 
 #: templates/districts.html:6 templates/municipality.html:6
 msgid "Municipality data"
-msgstr ""
+msgstr "Kuntadata"
 
 #: templates/homepage.html:7
 msgid "Front page"
@@ -102,6 +103,14 @@ msgstr "Yleistä"
 msgid "Scrapers"
 msgstr "Ruudunraapijat"
 
+#: templates/political/candidate_social_feeds.html:182
+msgid "No social media activity found."
+msgstr "Päivityksiä ei löytynyt."
+
+#: templates/political/candidate_social_feeds.html:312
+msgid "Choose a party"
+msgstr "Valitse puolue"
+
 #: templates/profiles/_profile_info.html:4
 msgid "About"
 msgstr "Kuvaus"
@@ -113,4 +122,3 @@ msgstr "Sijainti"
 #: templates/profiles/_profile_info.html:6
 msgid "Website"
 msgstr "Kotisivu"
-
