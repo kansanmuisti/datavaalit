@@ -23,6 +23,7 @@ v1_api.register(CandidateResource())
 v1_api.register(PartyResource())
 v1_api.register(PersonResource())
 v1_api.register(CandidateFeedResource())
+v1_api.register(CandidateUpdateResource())
 # geo
 v1_api.register(MunicipalityResource())
 v1_api.register(MunicipalityBoundaryResource())

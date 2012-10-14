@@ -79,6 +79,7 @@ class Command(BaseCommand):
                 self.stderr.write("%s\n" % str(tw))
                 raise
         feed.last_update = datetime.datetime.now()
+        feed.update_error_count = 0
         feed.save()
 
     def update_twitter(self):
@@ -91,8 +92,12 @@ class Command(BaseCommand):
         for feed in feed_list:
             self.process_twitter_timeline(twitter, feed)
 
-    def set_field_with_len(self, update, field_name, text):
-        max_length = update.__class__._meta.get_field(field_name).max_length
+    def _get_field_max_len(self, obj, field_name):
+        max_length = obj.__class__._meta.get_field(field_name).max_length
+        return max_length
+
+    def _set_field_with_len(self, update, field_name, text):
+        max_length = self._get_field_max_len(update, field_name)
         if text and len(text) > max_length:
             self.logger.warning("Truncating FB update %s field '%s' (length %d)" % (
                 update.origin_id, field_name, len(text)))
@@ -110,9 +115,6 @@ class Command(BaseCommand):
             feed_info = fbg.get(url)
         except pyfaceb.exceptions.FBHTTPException as e:
             self.logger.error(e)
-            feed.update_error_count += 1
-            feed.save()
-            # FIXME: Doesn't work
             raise UpdateError()
 
         feed.picture = feed_info.get('picture', {}).get('data', {}).get('url', None)
@@ -129,8 +131,6 @@ class Command(BaseCommand):
                 g = fbg.get(url)
             except pyfaceb.exceptions.FBHTTPException as e:
                 self.logger.error(e)
-                feed.update_error_count += 1
-                feed.save()
                 raise UpdateError()
             found = False
             for post in g['data']:
@@ -153,18 +153,19 @@ class Command(BaseCommand):
 
                 utc = dateutil.parser.parse(post['created_time'])
                 upd.created_time = utc.astimezone(dateutil.tz.tzlocal())
-                self.set_field_with_len(upd, 'text', post.get('message', None))
-                upd.link = post.get('link', None)
+                self._set_field_with_len(upd, 'text', post.get('message', None))
+                upd.share_link = post.get('link', None)
                 upd.picture = post.get('picture', None)
-                self.set_field_with_len(upd, 'share_title', post.get('name', None))
-                self.set_field_with_len(upd, 'share_caption', post.get('caption', None))
-                self.set_field_with_len(upd, 'share_description', post.get('description', None))
-                if upd.picture and len(upd.picture) > 250:
+                self._set_field_with_len(upd, 'share_title', post.get('name', None))
+                self._set_field_with_len(upd, 'share_caption', post.get('caption', None))
+                self._set_field_with_len(upd, 'share_description', post.get('description', None))
+                if upd.picture and len(upd.picture) > self._get_field_max_len(upd, 'picture'):
                     self.logger.warning("%s: Removing too long picture link" % upd.origin_id)
                     upd.picture = None
-                if upd.link and len(upd.link) > 250:
+                print self._get_field_max_len(upd, 'share_link')
+                if upd.share_link and len(upd.share_link) > self._get_field_max_len(upd, 'share_link'):
                     self.logger.warning("%s: Removing too long link" % upd.origin_id)
-                    upd.link = None
+                    upd.share_link = None
                 sub_type = post.get('status_type', None)
                 if sub_type:
                     upd.sub_type = sub_type
@@ -173,26 +174,27 @@ class Command(BaseCommand):
                 upd.interest = post.get('likes', {}).get('count', None)
                 if post['type'] == 'link':
                     upd.type = 'link'
-                    if not upd.link:
+                    if not upd.share_link:
                         self.logger.warning("FB %s: No link given for 'link' update" % post['id'])
                 elif post['type'] == 'photo':
                     upd.type = 'photo'
-                    assert upd.link
+                    assert upd.share_link
                     assert upd.picture
                 elif post['type'] == 'status':
                     upd.type = 'status'
                 elif post['type'] == 'video':
                     upd.type = 'video'
-                    if not upd.link:
+                    if not upd.share_link:
                         # Fall back to the 'source' attribute
-                        upd.link = post.get('source', None)
-                        if not upd.link:
+                        upd.share_link = post.get('source', None)
+                        if not upd.share_link:
                             pprint.pprint(post)
                             raise Exception("%s: No link for 'video 'update" % post['id'])
-                    assert upd.link
+                    assert upd.share_link
                 else:
                     pprint.pprint(post)
                     raise Exception("Unknown FB update type: %s" % post['type'])
+                print vars(upd)
                 upd.save()
 
             if not 'paging' in g:
@@ -209,6 +211,7 @@ class Command(BaseCommand):
                 break
             url = "%s/posts&limit=%d&until=%d" % (feed.origin_id, count, until)
         feed.update_error_count = 0
+        feed.last_update = datetime.datetime.now()
         feed.save()
 
     def update_facebook(self):
@@ -225,7 +228,8 @@ class Command(BaseCommand):
             try:
                 self.process_facebook_timeline(fbg, feed)
             except UpdateError:
-                pass
+                feed.update_error_count += 1
+                feed.save()
 
     def handle(self, *args, **options):
         self.logger = logging.getLogger(__name__)

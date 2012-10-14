@@ -30,15 +30,13 @@
 			color: #d44413;
 		}
 	}
-	.update-time {
-		color: #aaa;
-		font-size: 80%;
-	}
 	.share-media {
 		margin-top: 10px;
-		background-color: #eee;
+		background-color: #f8f8f8;
 		border: 1px solid #ddd;
 		overflow: hidden;
+		padding: 10px;
+		border-radius: 3px;
 	}
 	.share-picture {
 		float: left;
@@ -60,7 +58,18 @@
 		font-size: 90%;
 		padding-left: 20px;
 	}
-	
+	.bottom-row {
+		margin-top: 4px;
+	}
+	.interest-icon {
+		margin-left: 10px;
+		margin-top: 3px;
+	}
+	.update-time {
+		margin-left: 10px;
+		color: #aaa;
+		font-size: 80%;
+	}
 }
 
 </style>
@@ -91,7 +100,26 @@ SocialFeedList = Backbone.Tastypie.Collection.extend
   model: SocialFeed
 
 SocialUpdate = Backbone.Tastypie.Model.extend
-  urlRoot: '/api/v1/social_update/'
+  urlRoot: '/api/v1/candidate_social_update/'
+  get_permalink: ->
+    type = @.get('feed_type')
+    if type == 'FB'
+      return 'https://www.facebook.com/' + @.get('origin_id')
+    else if type == 'TW'
+      return 'https://www.twitter.com/' + @.get('origin_id')
+  get_feed_icon: ->
+    type = @.get('feed_type')
+    if type == 'FB'
+      icon = 'facebook.png'
+    else if type == 'TW'
+      icon = 'twitter.png'
+    return '/static/images/icons-16/' + icon
+  get_feed_permalink: ->
+    type = @.get('feed_type')
+    if type == 'FB'
+      return 'https://www.facebook.com/' + @.get('feed_origin_id')
+    else if type == 'TW'
+      return 'https://www.twitter.com/' + @.get('feed_origin_id')
   get_feed: (feed_list) ->
     # A little hack to make sure we have compatible feed names
     if @.feed
@@ -105,7 +133,7 @@ SocialUpdate = Backbone.Tastypie.Model.extend
     return @.candidate
 
 SocialUpdateList = Backbone.Tastypie.Collection.extend
-  urlRoot: '/api/v1/social_update/'
+  urlRoot: '/api/v1/candidate_social_update/'
   model: SocialUpdate
 
 SocialUpdateView = Backbone.View.extend
@@ -117,36 +145,37 @@ SocialUpdateView = Backbone.View.extend
   render: ->
     args = @model.toJSON()
     args.created_time = moment(args.created_time)
-    _.extend args,
-      candidate: @.model.candidate
-      feed: @.model.feed.toJSON()
-    console.log @.$el
+    args.feed_icon = @model.get_feed_icon()
+    args.permalink = @model.get_permalink()
+    args.feed_permalink = @model.get_feed_permalink()
     @.$el.html @template(args)
     return @.$el
 
 AppView = Backbone.View.extend
   el: '#some-updates'
   initialize: ->
-    @.feed_list = new SocialFeedList
-    @.feed_list.on 'reset', @.reset_feeds, @
     @.update_list = new SocialUpdateList
     @.update_list.on 'add', @.add_one, @
     @.update_list.on 'reset', @.add_all, @
   add_one: (update) ->
     console.log "add one", update
-    cand = update.get_candidate(@.feed_list)
     update_view = new SocialUpdateView {model: update}
     console.log @
-    @.$el.append update_view.render()
+    @.$('#some-list').append update_view.render()
+  set_municipality: (muni_id) ->
+    @.reset_update_list
+      candidate__municipality: muni_id
   add_all: ->
     console.log "add all"
-    this.$el.html('')
-    @.update_list.each @.add_one, @
-  reset_feeds: ->
-    console.log "reset feeds"
-    ids = (feed.get('id') for feed in @.feed_list.models)
-    _.extend @.update_list.filters,
-      feed__in: ids.join(',')
+    el = @.$('#some-list')
+    el.html('')
+    if @.update_list.length == 0
+      el.html('<h2>{% trans "No social media activity found." %}</h2>')
+    else
+      @.update_list.each @.add_one, @
+  reset_update_list: (filters) ->
+    console.log "reset update list"
+    _.extend @.update_list.filters, filters
     @.update_list.fetch()
 
 api_fetch = (type, opts) ->
@@ -184,7 +213,7 @@ jQuery ->
 
   switch_muni = (muni_id) ->
     selected_municipality = muni_id
-    fetch_feeds muni_id
+    app_view.set_municipality muni_id
     
   fetch_munis = ->
     api_fetch "municipality",
@@ -203,47 +232,65 @@ jQuery ->
         $("#municipality-chooser").trigger "liszt:updated"
         switch_muni selected_municipality
 
-  fetch_feeds = (muni_id) ->
-    _.extend app_view.feed_list.filters,
-      candidate__municipality: muni_id
-    app_view.feed_list.fetch()
-
   $("#municipality-chooser").chosen().change((ev, args) ->
     muni_id = parseInt(args.selected)
     switch_muni muni_id
   )
+  $("#party-chooser").chosen().change((ev, args) ->
+  )
 
   fetch_munis()
+
+  $(window).scroll ->
+    w = $(window)
+    if w.scrollTop() + w.height() == $(document).height()
+      console.log "scroll bottom"
+      app_view.update_list.fetchNext()
+  $("#technical-details-button").click ->
+    $("#technical-details-button").hide()
+    $("#technical-details").show()
+    return false
 </script>
 {% endcompress %}
 {% endblock %}
 
 {% block body %}
   <h1>Kunnallisvaaliehdokkaiden some-feedit</h1>
-  <div style="margin-bottom: 20px">
+  <div class="span8" style="overflow: hidden; clear: both">
+    <p>Tällä sivulla voit selata vuoden 2012 kunnallisvaaliehdokkaiden sosiaalisen median
+  päivityksiä. Voit rajata tarkastelun kunnan ja puolueen perusteella. Ehdokkaiden profiilien osoitteet on saatu <a href="https://vaalikone.yle.fi/">Ylen vaalikoneesta</a>.</p>
+    <a id="technical-details-button" href="#">Lue lisää teknisistä yksityiskohdista »</a>
+    <div id="technical-details" class="hide">
+      <p>Sivu käyttää Datavaalit-projektin tietokantaa REST-rajapinnan yli.</p>
+      <p><a href="https://github.com/kansanmuisti/datavaalit">Koko sivuston lähdekoodi</a> on avoimesti saatavilla. Tämä sivu on ohjelmoitu <a href="http://coffeescript.org/">CoffeeScript-kielellä</a>. Sivun lähdekoodi on <a href="https://github.com/kansanmuisti/datavaalit/blob/master/web/templates/political/candidate_social_feeds.html">täällä</a>. REST-toiminnallisuuden toteuttaa <a href="http://backbonejs.org/">Backbone.js-kirjasto</a> ja suomenkieliset aikaleimat muotoilee <a href="http://momentjs.com/">Moment.js-kirjasto</a>.</p>
+    </div>
+  </div>
+  <div class="span8" style="margin-top: 20px; margin-bottom: 20px; clear: both">
     <select data-placeholder="{% trans "Choose a municipality" %}" id="municipality-chooser">
     </select>
+    <select data-placeholder="{% trans "Choose a party" %}" id="party-chooser">
+    </select>
   </div>
-  <div>
-    <ul id="some-updates" class="unstyled">
+  <div id="some-updates">
+    <ul id="some-list" class="unstyled">
     </ul>
   </div>
   <script type="text/template" id="some-update-template">
-    <a class="candidate-picture" href="#">
-      <% if (feed.picture) { %>
-      <img src="<%= feed.picture %>" />
+    <a class="candidate-picture" href="<%= feed_permalink %>">
+      <% if (feed_picture) { %>
+      <img src="<%= feed_picture %>" />
       <% } else { %>
       <div class="no-thumbnail"></div>
       <% } %>
     </a>
     <div class="update-info">
       <div class="candidate-id">
-        <a class="candidate-name" href="#"><%= candidate.person_name %></a> /
-        <span class="candidate-party"><%= candidate.party_code %></span>
+        <a class="candidate-name" href="<%= feed_permalink %>"><%= candidate_first_name %> <%= candidate_last_name %></a> /
+        <span class="candidate-party"><%= candidate_party_code %></span>
       </div>
       <div class="update-text"><%= text %></div>
       <% if (picture || share_link) { %>
-      <div class="share-media well-small">
+      <div class="share-media">
         <div style="clear: both">
         <div class="share-picture">
           <a href="<%= share_link %>"><img src="<%= picture %>" /></a>
@@ -258,7 +305,13 @@ jQuery ->
         </div>
       </div>
       <% } %>
-      <div class="update-time"><%= created_time.from() %></div>
+      <div class="bottom-row">
+        <a href="<%= permalink %>"><img class="feed-icon" src="<%= feed_icon %>"></a>
+        <span class="update-time"><%= created_time.from() %></span>
+        <% if (interest != null) { %>
+          <span class="interest"><i class="interest-icon icon-thumbs-up"></i> <%= interest %></span>
+        <% } %>
+      </div>
     </div>
   </script>
 {% endblock %}
