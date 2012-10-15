@@ -20,7 +20,7 @@ from django import db
 from web.stats.models import *
 from web.geo.models import *
 from web.political.models import *
-from web.social.utils import get_facebook_graph
+from web.social.utils import FeedUpdater, UpdateError
 
 class DjangoBackend(Backend):
     def submit_elections(self, elections):
@@ -128,7 +128,7 @@ class DjangoBackend(Backend):
         feed_name = unicode(feed_name).encode('utf8')
         self.logger.debug("%s: Validating FB feed %s" % (person_name, feed_name))
         try:
-            graph = get_facebook_graph(feed_name)
+            graph = self.feed_updater.fb_graph.get(feed_name)
         except pyfaceb.exceptions.FBHTTPException as e:
             print e
             return
@@ -154,7 +154,7 @@ class DjangoBackend(Backend):
         feed_name = unicode(feed_name).encode('utf8')
         self.logger.debug("%s: Validating Twitter feed %s" % (person_name, feed_name))
 
-        twitter = Twython()
+        twitter = self.feed_updater.twitter
         if feed_name.isdigit():
             args = {'user_id': feed_name}
         else:
@@ -181,6 +181,9 @@ class DjangoBackend(Backend):
         cf.save()
 
     def submit_candidates(self, election, candidates):
+        if not getattr(self, 'feed_updater', None):
+            self.feed_updater = FeedUpdater(self.logger)
+
         election = Election.objects.get(type=election['type'], year=election['year'])
         muni_dict = {}
         for muni in Municipality.objects.all():
