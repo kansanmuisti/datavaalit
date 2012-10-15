@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import csv
+import re
 
 from importers import Importer, register_importer
 from importers.fi import canonize_party
@@ -72,8 +73,31 @@ class YleVaalikoneImporter(Importer):
                     fb_feed = None
                 elif fb_feed == 'info':
                     fb_feed = None
-            if fb_feed:
-                cand['social'] = {'fb_feed': fb_feed}
+            tw_feed = row[17].strip()
+            if tw_feed:
+                if tw_feed == '-':
+                    tw_feed = None
+                elif ' ' in tw_feed:
+                    tw_feed = None
+            if tw_feed:
+                if '/' in tw_feed:
+                    tw_feed = tw_feed.strip('/').split('/')[-1]
+                if tw_feed and tw_feed[0] == '@':
+                    tw_feed = tw_feed[1:]
+                if tw_feed and tw_feed[0] == '#':
+                    tw_feed = tw_feed[1:]
+                res = re.match('^[A-Za-z0-9_]{3,}$', tw_feed)
+                if not res:
+                    tw_feed = None
+
+            if fb_feed or tw_feed:
+                social = {}
+                if fb_feed:
+                    social['fb_feed'] = fb_feed
+                if tw_feed:
+                    social['tw_feed'] = tw_feed
+                cand['social'] = social
+
             cand['number'] = int(row[10])
             candidate_list.append(cand)
 

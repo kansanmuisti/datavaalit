@@ -68,8 +68,11 @@ class CandidateUpdateResource(UpdateResource):
     candidate = fields.ToOneField('political.api.CandidateResource',
                                   'feed__candidatefeed__candidate')
     class Meta:
-        queryset = Update.objects.all().select_related('feed__candidatefeed__candidate')
-        queryset = queryset.select_related('feed').order_by('-created_time')
+        related = ('feed', 'feed__candidatefeed__candidate',
+                   'feed__candidatefeed__candidate__municipality')
+        queryset = Update.objects.all().order_by('-created_time')
+        for rel in related:
+            queryset = queryset.select_related(rel)
         resource_name = 'candidate_social_update'
         filtering = {
             'candidate': ALL_WITH_RELATIONS,
@@ -88,9 +91,11 @@ class CandidateUpdateResource(UpdateResource):
         bundle.data['candidate_first_name'] = candidate.person.first_name
         bundle.data['candidate_last_name'] = candidate.person.last_name
         bundle.data['candidate_party_code'] = candidate.party_code
+        bundle.data['candidate_municipality_name'] = candidate.municipality.name
         bundle.data['feed_picture'] = feed.picture
         bundle.data['feed_type'] = feed.type
         bundle.data['feed_origin_id'] = feed.origin_id
+        bundle.data['feed_account_name'] = feed.account_name
         return bundle
 
 

@@ -1,12 +1,14 @@
 from __future__ import absolute_import
 import os
 import sys
+import re
 
 from importers import Backend
 
 import pinax
 import pinax.env
 import pyfaceb
+from twython import Twython, TwythonError
 
 my_path = os.path.abspath(os.path.dirname(__file__))
 project_path = os.path.normpath(my_path + '/../../web')
@@ -147,6 +149,37 @@ class DjangoBackend(Backend):
         cf.account_name = graph.get('username', None)
         cf.save()
 
+    def _validate_twitter_feed(self, candidate, feed_name):
+        person_name = unicode(candidate.person).encode('utf8')
+        feed_name = unicode(feed_name).encode('utf8')
+        self.logger.debug("%s: Validating Twitter feed %s" % (person_name, feed_name))
+
+        twitter = Twython()
+        if feed_name.isdigit():
+            args = {'user_id': feed_name}
+        else:
+            args = {'screen_name': feed_name}
+
+        try:
+            res = twitter.showUser(**args)
+        except TwythonError as e:
+            self.logger.error('Twitter error: %s', e)
+            return
+
+        origin_id = str(res['id'])
+        if CandidateFeed.objects.filter(type='TW', origin_id=origin_id).count():
+            self.logger.warning('%s: TW %s: already exists' % (person_name, feed_name))
+            return
+
+        try:
+            cf = CandidateFeed.objects.get(candidate=candidate, type='TW')
+            return
+        except CandidateFeed.DoesNotExist:
+            cf = CandidateFeed(candidate=candidate, type='TW')
+        cf.origin_id = origin_id
+        cf.account_name = res.get('screen_name', None)
+        cf.save()
+
     def submit_candidates(self, election, candidates):
         election = Election.objects.get(type=election['type'], year=election['year'])
         muni_dict = {}
@@ -202,6 +235,8 @@ class DjangoBackend(Backend):
                 social = c['social']
                 if 'fb_feed' in social:
                     self._validate_fb_feed(candidate, social['fb_feed'])
+                if 'tw_feed' in social:
+                    self._validate_twitter_feed(candidate, social['tw_feed'])
 
             count += 1
 

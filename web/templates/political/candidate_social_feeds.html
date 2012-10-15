@@ -30,6 +30,11 @@
 			color: #d44413;
 		}
 	}
+	.candidate-muni {
+		font-size: 90%;
+		float: right;
+		color: grey;
+	}
 	.share-media {
 		margin-top: 10px;
 		background-color: #f8f8f8;
@@ -111,7 +116,8 @@ SocialUpdate = Backbone.Tastypie.Model.extend
     if type == 'FB'
       return 'https://www.facebook.com/' + @.get('origin_id')
     else if type == 'TW'
-      return 'https://www.twitter.com/' + @.get('origin_id')
+      base_url = @.get_feed_permalink()
+      return base_url + '/status/' + @.get('origin_id')
   get_feed_icon: ->
     type = @.get('feed_type')
     if type == 'FB'
@@ -124,7 +130,7 @@ SocialUpdate = Backbone.Tastypie.Model.extend
     if type == 'FB'
       return 'https://www.facebook.com/' + @.get('feed_origin_id')
     else if type == 'TW'
-      return 'https://www.twitter.com/' + @.get('feed_origin_id')
+      return 'https://www.twitter.com/' + @.get('feed_account_name')
   get_feed: (feed_list) ->
     # A little hack to make sure we have compatible feed names
     if @.feed
@@ -219,21 +225,24 @@ api_fetch = (type, opts) ->
       error: error_cb
   fetch_objs url
 
+window.selected_municipality = null
+window.selected_party = null
+
 jQuery ->
   app_view = new AppView
 
   municipalities = {}
   
-  selected_municipality = $.jStorage.get('csf-muni', 91)
-  selected_party = $.jStorage.get('csf-party', null)
+  window.selected_municipality = $.jStorage.get('csf-muni', 91)
+  window.selected_party = $.jStorage.get('csf-party', null)
 
   set_muni = (muni_id) ->
-    selected_municipality = muni_id
+    window.selected_municipality = muni_id
     $.jStorage.set("csf-muni", muni_id)
     app_view.set_municipality muni_id
 
   set_party = (party_id) ->
-    selected_party = party_id
+    window.selected_party = party_id
     $.jStorage.set("csf-party", party_id)
     app_view.set_party party_id
     
@@ -310,7 +319,7 @@ jQuery ->
   <div class="span8" style="overflow: hidden; clear: both">
     <p>Tällä sivulla voit selata vuoden 2012 kunnallisvaaliehdokkaiden sosiaalisen median
   päivityksiä. Voit rajata tarkastelun kunnan ja puolueen perusteella. Ehdokkaiden profiilien osoitteet on saatu <a href="https://vaalikone.yle.fi/">Ylen vaalikoneesta</a>.</p>
-    <p>Mukana on <strong>{{ update_count }}</strong> päivitystä <strong>{{ feed_count }}</strong> ehdokkaalta. Tietoja on päivitetty viimeksi <time datetime="{{ last_update|date:"c" }}">{{ last_update }}</time>.</p>
+    <p>Mukana on <strong>{{ tw.update_count|add:fb.update_count }}</strong> päivitystä. Päivityksiä haemme <strong>{{ tw.feed_count }}</strong> ehdokkaan Twitter-syötteestä ja <strong>{{ fb.feed_count }}</strong> ehdokkaan Facebook-sivulta. Tietoja on päivitetty viimeksi <time datetime="{{ last_update|date:"c" }}">{{ last_update }}</time>.</p>
     <a id="technical-details-button" href="#">Lue lisää palvelun teknisistä yksityiskohdista »</a>
     <div id="technical-details" class="hide">
       <p>Sivu käyttää Datavaalit-projektin tietokantaa REST-rajapinnan yli.</p>
@@ -341,6 +350,9 @@ jQuery ->
       <div class="candidate-id">
         <a class="candidate-name" href="<%= feed_permalink %>"><%= candidate_first_name %> <%= candidate_last_name %></a> /
         <span class="candidate-party"><%= candidate_party_code %></span>
+        <% if (!selected_municipality) { %>
+        <span class="candidate-muni"><%= candidate_municipality_name %></span>
+        <% } %>
       </div>
       <div class="update-text"><%= text %></div>
       <% if (picture || share_link) { %>
