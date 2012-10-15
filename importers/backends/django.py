@@ -21,6 +21,7 @@ from web.stats.models import *
 from web.geo.models import *
 from web.political.models import *
 from web.social.utils import FeedUpdater, UpdateError
+from web.social.models import BrokenFeed
 
 class DjangoBackend(Backend):
     def submit_elections(self, elections):
@@ -127,24 +128,72 @@ class DjangoBackend(Backend):
         person_name = unicode(candidate.person).encode('utf8')
         feed_name = unicode(feed_name).encode('utf8')
         self.logger.debug("%s: Validating FB feed %s" % (person_name, feed_name))
+
+        # Attempt to find the feed with different parameters
+        search_args = [
+            {'origin_id__iexact': feed_name},
+            {'account_name__iexact': feed_name}
+        ]
+
+        cf = None
+        for args in search_args:
+            try:
+                cf = CandidateFeed.objects.get(type='FB', **args)
+                self.logger.debug("%s: Feed %s found" % (person_name, feed_name))
+                if cf.candidate != candidate:
+                    other_name = unicode(candidate.person).encode('utf8')
+                    self.logger.warning("%s: Found feed (%s) was for %s" %
+                        (person_name, feed_name, other_name))
+                if not self.replace:
+                    return
+                break
+            except CandidateFeed.DoesNotExist:
+                pass
+
+        # Check if the feed was previously marked broken.
+        bf = None
+        if not cf:
+            try:
+                bf = BrokenFeed.objects.get(type='FB', origin_id=feed_name)
+                self.logger.debug("%s: FB feed %s marked broken" % (person_name, feed_name))
+                if not self.replace:
+                    return
+            except BrokenFeed.DoesNotExist:
+                pass
+
+        # Attempt to download data from FB and mark the feed
+        # as broken if we encounter trouble.
         try:
             graph = self.feed_updater.fb_graph.get(feed_name)
         except pyfaceb.exceptions.FBHTTPException as e:
-            print e
+            if not cf and not bf:
+                bf = BrokenFeed(type='FB', origin_id=feed_name)
+                bf.reason = e.message[0:49]
+                bf.save()
             return
         if not 'category' in graph:
             self.logger.warning('%s: FB %s: not a page' % (person_name, feed_name))
-            return
-        origin_id = graph['id']
-        if CandidateFeed.objects.filter(type='FB', origin_id=origin_id).count():
-            self.logger.warning('%s: FB %s: already exists' % (person_name, feed_name))
+            assert not cf
+            if not bf:
+                bf = BrokenFeed(type='FB', origin_id=feed_name)
+                bf.reason = "not-page"
+                bf.save()
             return
 
-        try:
-            cf = CandidateFeed.objects.get(candidate=candidate, type='FB')
-            return
-        except CandidateFeed.DoesNotExist:
-            cf = CandidateFeed(candidate=candidate, type='FB')
+        # Now we know the feed is valid. If a BrokenFeed object exists,
+        # remove it.
+        if bf:
+            bf.delete()
+
+        origin_id = graph['id']
+        if not cf:
+            try:
+                cf = CandidateFeed.objects.get(type='FB', origin_id=origin_id)
+                assert cf.candidate == candidate
+            except CandidateFeed.DoesNotExist:
+                assert CandidateFeed.objects.filter(candidate=candidate, type='FB').count() == 0
+                cf = CandidateFeed(candidate=candidate, type='FB')
+
         cf.origin_id = origin_id
         cf.account_name = graph.get('username', None)
         cf.save()
@@ -156,26 +205,47 @@ class DjangoBackend(Backend):
 
         twitter = self.feed_updater.twitter
         if feed_name.isdigit():
-            args = {'user_id': feed_name}
+            tw_args = {'user_id': feed_name}
+            orm_args = {'origin_id': feed_name}
         else:
-            args = {'screen_name': feed_name}
+            tw_args = {'screen_name': feed_name}
+            orm_args = {'account_name__iexact': feed_name}
 
         try:
-            res = twitter.showUser(**args)
+            cf = CandidateFeed.objects.get(type='TW', **orm_args)
+            self.logger.debug("%s: Feed %s found" % (person_name, feed_name))
+            if cf.candidate != candidate:
+                other_name = unicode(candidate.person).encode('utf8')
+                self.logger.warning("%s: Found feed (%s) was for %s" %
+                    (person_name, feed_name, other_name))
+            if not self.replace:
+                return
+        except CandidateFeed.DoesNotExist:
+            cf = None
+            pass
+
+        # Check if the feed was previously marked broken.
+        bf = None
+        if not cf:
+            try:
+                bf = BrokenFeed.objects.get(type='TW', origin_id=feed_name)
+                self.logger.debug("%s: TW feed %s marked broken" % (person_name, feed_name))
+                if not self.replace:
+                    return
+            except BrokenFeed.DoesNotExist:
+                pass
+
+        try:
+            res = twitter.showUser(**tw_args)
         except TwythonError as e:
             self.logger.error('Twitter error: %s', e)
             return
 
         origin_id = str(res['id'])
-        if CandidateFeed.objects.filter(type='TW', origin_id=origin_id).count():
-            self.logger.warning('%s: TW %s: already exists' % (person_name, feed_name))
-            return
-
-        try:
-            cf = CandidateFeed.objects.get(candidate=candidate, type='TW')
-            return
-        except CandidateFeed.DoesNotExist:
+        if not cf:
+            assert CandidateFeed.objects.filter(candidate=candidate, type='TW').count() == 0
             cf = CandidateFeed(candidate=candidate, type='TW')
+
         cf.origin_id = origin_id
         cf.account_name = res.get('screen_name', None)
         cf.save()

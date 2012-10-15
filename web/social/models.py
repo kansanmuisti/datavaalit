@@ -27,6 +27,17 @@ class Feed(models.Model):
         self.interest = feed_info.get('likes', None)
         return feed_info
 
+class BrokenFeed(models.Model):
+    type = models.CharField(max_length=2, choices=Feed.TYPE_CHOICES)
+    origin_id = models.CharField(max_length=50, db_index=True)
+    account_name = models.CharField(max_length=50, null=True)
+    check_time = models.DateTimeField(auto_now=True)
+    reason = models.CharField(max_length=50)
+
+    class Meta:
+        unique_together = (('type', 'origin_id'),)
+
+
 class Update(models.Model):
     feed = models.ForeignKey(Feed, db_index=True)
     text = models.CharField(max_length=4000, null=True)

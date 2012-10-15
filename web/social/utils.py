@@ -6,6 +6,7 @@ import datetime
 import email.utils
 import urllib
 import calendar
+import time
 from twython import Twython, TwythonError
 import pyfaceb
 import dateutil.parser
@@ -13,11 +14,12 @@ import dateutil.tz
 
 from django.conf import settings
 from django.db import transaction
+from django.db.models import Q
 from social.models import ApiToken, Feed, Update
 
 class UpdateError(Exception):
-    def __init__(self, msg, can_retry=False):
-        self.can_retry = can_retry
+    def __init__(self, msg, can_continue=False):
+        self.can_continue = can_continue
         super(UpdateError, self).__init__(msg)
 
 TOKEN_URL = "https://graph.facebook.com/oauth/access_token?" + \
@@ -46,10 +48,18 @@ TWITTER_SETTING_MAP = {
     'TWITTER_ACCESS_TOKEN_SECRET': 'oauth_token_secret'
 }
 
+def _append_without_dupes(feed_list, feed_list_b):
+    feed_dict = {}
+    for f in feed_list:
+        feed_dict[f.pk] = f
+    for f in feed_list_b:
+        if f.pk not in feed_dict:
+            feed_list.append(f)
+
 class FeedUpdater(object):
     def __init__(self, logger=None):
         if not logger:
-            logger = logging.getLogger("feed-updater")
+            logger = logging.getLogger(__name__)
         self.logger = logger
         token = get_facebook_token()
         self.fb_graph = pyfaceb.FBGraph(token)
@@ -92,8 +102,36 @@ class FeedUpdater(object):
                 if 'Not Found' in e.msg:
                     break
 
+    def find_feeds_to_update(self, feed_type=None):
+        base_query = Feed.objects.order_by('last_update')
+        if feed_type:
+            base_query = base_query.filter(type=feed_type)
+        # Check first feeds that have never been updated.
+        feed_list = list(base_query.filter(Q(last_update__isnull=True)))
+        self.logger.debug("%d feeds that have never been updated" % len(feed_list))
+
+        # Then feeds that haven't been updated in two days.
+        update_dt = datetime.datetime.now() - datetime.timedelta(days=2)
+        fl = list(base_query.filter(last_update__lt=update_dt))
+        self.logger.debug("%d feeds that haven't been updated in a while" % len(fl))
+        _append_without_dupes(feed_list, fl)
+
+        # Finally feeds that haven't been updated in two hours,
+        # but that are active (i.e. have posts dating from the
+        # last week).
+        update_dt = datetime.datetime.now() - datetime.timedelta(hours=2)
+        post_dt = datetime.datetime.now() - datetime.timedelta(weeks=1)
+        active = Q(update__created_time__gt=post_dt)
+        fl = list(base_query.filter(Q(last_update__lt=update_dt) & active).distinct())
+        self.logger.debug("%d feeds that are active" % len(fl))
+        _append_without_dupes(feed_list, fl)
+
+        self.logger.debug("updating a total of %d feeds" % len(feed_list))
+
+        return feed_list
+
     @transaction.commit_on_success
-    def process_twitter_timeline(self, feed):
+    def process_twitter_feed(self, feed):
         self.logger.info("Processing Twitter feed %s" % feed.account_name)
         user_id = feed.origin_id
         args = {'user_id': user_id, 'username': user_id, 'count': 200,
@@ -104,7 +142,7 @@ class FeedUpdater(object):
         except TwythonError as e:
             self.logger.error("Got Twitter exception: %s" % e)
             if "Rate limit exceeded" in e.msg:
-                raise UpdateError("Rate limit exceeded", can_retry=False)
+                raise UpdateError("Rate limit exceeded", can_continue=False)
             raise UpdateError(e.msg)
         feed.interest = info['followers_count']
         feed.picture = info['profile_image_url']
@@ -122,7 +160,7 @@ class FeedUpdater(object):
                 except TwythonError as e:
                     self.logger.error("Got Twitter exception: %s" % e)
                     if "Rate limit exceeded" in e.msg:
-                        raise UpdateError("Rate limit exceeded", can_retry=False)
+                        raise UpdateError("Rate limit exceeded", can_continue=False)
                     raise UpdateError(e.msg)
                 break
             if 'error' in tweets:
@@ -163,18 +201,34 @@ class FeedUpdater(object):
         feed.last_update = datetime.datetime.now()
         feed.save()
 
+    def _fb_get(self, url):
+        last_e = None
+        # Allow for three retries
+        for i in range(0, 3):
+            try:
+                ret = self.fb_graph.get(url)
+                return ret
+            except pyfaceb.exceptions.FBHTTPException as e:
+                self.logger.error("%s" % e)
+                if i < 3:
+                    # Some errors seem to be transient.
+                    if '#803' in e.message or '2500' in e.message:
+                        self.logger.error("Retrying")
+                        last_e = e
+                        # Sleep for a while before continuing.
+                        time.sleep(0.5)
+                        continue
+        # If we got this far, the error repeated 3 times, so
+        # we bail out.
+        raise UpdateError(last_e.message)
+
     @transaction.commit_on_success
-    def process_facebook_timeline(self, feed, full_update=False):
+    def process_facebook_feed(self, feed, full_update=False):
         self.logger.info('Processing feed %s: %s' % (feed.account_name, feed.origin_id))
 
         # First update the feed itself
         url = '%s&fields=picture,likes,about' % feed.origin_id
-        try:
-            feed_info = self.fb_graph.get(url)
-        except pyfaceb.exceptions.FBHTTPException as e:
-            self.logger.error("%s" % e)
-            raise UpdateError(e.message)
-
+        feed_info = self._fb_get(url)
         feed.picture = feed_info.get('picture', {}).get('data', {}).get('url', None)
         feed.interest = feed_info.get('likes', None)
 
@@ -186,11 +240,7 @@ class FeedUpdater(object):
         url = '%s/posts&limit=%d' % (feed.origin_id, count)
         while True:
             self.logger.info('Fetching %s' % url)
-            try:
-                g = self.fb_graph.get(url)
-            except pyfaceb.exceptions.FBHTTPException as e:
-                self.logger.error("%s" % e)
-                raise UpdateError(e.message)
+            g = self._fb_get(url)
             found = False
             for post in g['data']:
                 # Sanity check
@@ -275,6 +325,31 @@ class FeedUpdater(object):
         feed.last_update = datetime.datetime.now()
         feed.save()
 
+    def process_feed(self, feed):
+        if feed.type == "TW":
+            return self.process_twitter_feed(feed)
+        assert feed.type == "FB"
+        return self.process_facebook_feed(feed)
+
+    def update_feeds(self):
+        feed_list = self.find_feeds_to_update("TW")
+        for feed in feed_list:
+            try:
+                self.process_feed(feed)
+            except UpdateError as e:
+                feed.update_error_count += 1
+                feed.save()
+                if not e.can_continue:
+                    break
+        feed_list = self.find_feeds_to_update("FB")
+        for feed in feed_list:
+            try:
+                self.process_feed(feed)
+            except UpdateError as e:
+                feed.update_error_count += 1
+                feed.save()
+                if not e.can_continue:
+                    break
 
 def get_facebook_graph(graph_id):
     token = get_facebook_token()
