@@ -236,7 +236,8 @@ class DjangoBackend(Backend):
         candidate_counter = 0
         candidate_updates_counter = 0
         expense_counter = 0
-
+        missing_counter = 0
+        
         for candidate_expenses in expenses:
             
             # Keep track if the candidate expenses were updated
@@ -263,9 +264,15 @@ class DjangoBackend(Backend):
                 municipality_id = Municipality.objects.get(name=candidate_expenses['municipality']).id
                 
                 # Since expense reports can have several firstnames, try 
-                # following names as will if the 1st doesn't match 
+                # following names as will if the 1st doesn't match. . 
                 # TODO: heuristics here could be done smarter
-                first_names = candidate_expenses['first_names'].split(' ')
+                first_names = candidate_expenses['first_names'].split()
+                
+                # Break two-part names ("John-Peter") into to individual names 
+                # in case one of them is the primary first name
+                for first_name in first_names:
+                    if '-' in first_name:
+                        first_names += first_name.split('-')
                 
                 found = False
                 
@@ -285,9 +292,10 @@ class DjangoBackend(Backend):
                     except Person.DoesNotExist:
                         self.logger.debug("Could not find person %s with first name: %s." % (person_str, first_name.encode('utf-8')))
                         continue
-                
+                    
                 if not found:
                     self.logger.warning("Could not find person %s in table Person" % person_str)   
+                    missing_counter += 1
                 
                 # What expenses (if any) has person got in the Expense table
                 db_expenses = Expense.objects.filter(candidate=candidate)
@@ -331,6 +339,5 @@ class DjangoBackend(Backend):
         not_updated = len(expenses) - candidate_updates_counter
         if not_updated > 0:
             self.logger.info("%s candidates not updated" % not_updated)
-        missing = len(expenses) - (candidate_counter - candidate_updates_counter)
-        if missing > 0:
-            self.logger.info("Could not match names for %s candidates" % missing)
+        if missing_counter > 0:
+            self.logger.info("Could not match names for %s candidates" % missing_counter)
