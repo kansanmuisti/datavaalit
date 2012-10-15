@@ -91,6 +91,7 @@ time {
 <script type="text/javascript" src="{% static "js/backbone.js" %}"></script>
 <script type="text/javascript" src="{% static "js/backbone-tastypie.js" %}"></script>
 <script type="text/javascript" src="{% static "js/jstorage.js" %}"></script>
+<script type="text/javascript" src="{% static "js/jquery.ba-bbq.js" %}"></script>
 {% endcompress %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/moment.js" %}"></script>
@@ -177,15 +178,14 @@ AppView = Backbone.View.extend
       args = {}
     else
       args = {candidate__municipality: muni_id}
-    @.reset_update_list args
-
-  set_party: (party_id) ->
+    @.set_filters args
+  set_party: (party_id, no_render) ->
     if not party_id
       delete @.update_list.filters.candidate__party
       args = {}
     else
       args = {candidate__party: party_id}
-    @.reset_update_list args
+    @.set_filters args
   add_all: ->
     el = @.$('#some-list')
     el.html('')
@@ -193,9 +193,10 @@ AppView = Backbone.View.extend
       el.html('<h2>{% trans "No social media activity found." %}</h2>')
     else
       @.update_list.each @.add_one, @
-  reset_update_list: (filters) ->
+  set_filters: (filters) ->
     delete @.update_list.filters.offset
     _.extend @.update_list.filters, filters
+  render: ->
     @.update_list.fetch()
 
 api_fetch = (type, opts) ->
@@ -231,19 +232,46 @@ window.selected_party = null
 jQuery ->
   app_view = new AppView
 
-  municipalities = {}
-  
-  window.selected_municipality = $.jStorage.get('csf-muni', 91)
-  window.selected_party = $.jStorage.get('csf-party', null)
+  read_params_from_hash = ->
+    hash = window.location.hash
+    if hash.substring(0, 2) == "#?"
+      hash = hash.substring(2)
+    params = $.deparam(hash)
+    id = parseInt(params.municipality)
+    if !isNaN(id)
+      window.selected_municipality = id
+      params.municipality = id
+    else 
+      delete params.municipality
+    id = parseInt(params.party)
+    if !isNaN(id)
+      window.selected_party = id
+      params.party = id
+    else
+      delete params.party
+    return params
+  read_params_from_hash()
+
+  update_location_hash = ->
+    params = {}
+    if window.selected_municipality
+      params.municipality = window.selected_municipality
+    if window.selected_party
+      params.party = window.selected_party
+    param_str = $.param(params)
+    if param_str
+      param_str = '#?' + param_str
+    else
+      param_str = '#'
+    console.log '"' + param_str + '"'
+    $.bbq.pushState param_str
 
   set_muni = (muni_id) ->
     window.selected_municipality = muni_id
-    $.jStorage.set("csf-muni", muni_id)
     app_view.set_municipality muni_id
 
   set_party = (party_id) ->
     window.selected_party = party_id
-    $.jStorage.set("csf-party", party_id)
     app_view.set_party party_id
     
   fetch_munis = ->
@@ -261,7 +289,6 @@ jQuery ->
           el = $("<option #{ selected }value=#{ muni.id }>#{ muni.name }</option>")
           el_list.append el
         $("#municipality-chooser").trigger "liszt:updated"
-        set_muni selected_municipality
 
   fetch_parties = ->
     api_fetch "party",
@@ -279,6 +306,7 @@ jQuery ->
           el = $("<option #{ selected }value=#{ party.id }>#{ party.abbrev }</option>")
           el_list.append el
         $("#party-chooser").trigger "liszt:updated"
+        
 
   chosen_args = {allow_single_deselect: true}
   $("#municipality-chooser").chosen(chosen_args).change((ev, args) ->
@@ -287,6 +315,8 @@ jQuery ->
     else
       muni_id = parseInt(args.selected)
     set_muni muni_id
+    update_location_hash()
+    app_view.render()
   )
   $("#party-chooser").chosen(chosen_args).change((ev, args) ->
     if not args
@@ -294,8 +324,21 @@ jQuery ->
     else
       party_id = parseInt(args.selected)
     set_party party_id
+    update_location_hash()
+    app_view.render()
   )
-
+  $(window).bind('hashchange', ->
+    params = read_params_from_hash()
+    if params.municipality
+      set_muni params.municipality
+    else
+      set_muni null
+    if params.party
+      set_party params.party
+    else
+      set_party null
+    app_view.render()
+  )
   fetch_munis()
   fetch_parties()
 
@@ -303,6 +346,7 @@ jQuery ->
     w = $(window)
     if w.scrollTop() + w.height() == $(document).height()
       app_view.update_list.fetchNext()
+    
   $("#technical-details-button").click ->
     $("#technical-details-button").hide()
     $("#technical-details").show()
@@ -310,6 +354,9 @@ jQuery ->
   $("time").each ->
     m_time = moment($(this).attr('datetime'))
     $(this).html(m_time.from())
+
+  # Start the rendering
+  $(window).trigger('hashchange')
 </script>
 {% endcompress %}
 {% endblock %}
