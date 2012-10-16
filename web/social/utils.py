@@ -140,6 +140,8 @@ class FeedUpdater(object):
         try:
             info = self.twitter.showUser(**args)
         except TwythonError as e:
+            if 'Unauthorized:' in e.msg:
+                raise UpdateError(e.msg, can_continue=True)
             self.logger.error("Got Twitter exception: %s" % e)
             if "Rate limit exceeded" in e.msg:
                 raise UpdateError("Rate limit exceeded", can_continue=False)
@@ -159,6 +161,8 @@ class FeedUpdater(object):
                     continue
                 except TwythonError as e:
                     self.logger.error("Got Twitter exception: %s" % e)
+                    if 'Unauthorized:' in e.msg:
+                        raise UpdateError(e.msg, can_continue=True)
                     if "Rate limit exceeded" in e.msg:
                         raise UpdateError("Rate limit exceeded", can_continue=False)
                     raise UpdateError(e.msg)
