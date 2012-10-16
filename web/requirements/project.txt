@@ -19,3 +19,4 @@ requests-cache
 twitter-text-py
 twython
 pyfaceb
+django-celery
