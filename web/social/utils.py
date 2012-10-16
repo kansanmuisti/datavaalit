@@ -108,25 +108,25 @@ class FeedUpdater(object):
             base_query = base_query.filter(type=feed_type)
         # Check first feeds that have never been updated.
         feed_list = list(base_query.filter(Q(last_update__isnull=True)))
-        self.logger.debug("%d feeds that have never been updated" % len(feed_list))
+        self.logger.info("%d feeds that have never been updated" % len(feed_list))
 
         # Then feeds that haven't been updated in two days.
         update_dt = datetime.datetime.now() - datetime.timedelta(days=2)
         fl = list(base_query.filter(last_update__lt=update_dt))
-        self.logger.debug("%d feeds that haven't been updated in a while" % len(fl))
+        self.logger.info("%d feeds that haven't been updated in a while" % len(fl))
         _append_without_dupes(feed_list, fl)
 
         # Finally feeds that haven't been updated in two hours,
         # but that are active (i.e. have posts dating from the
         # last week).
         update_dt = datetime.datetime.now() - datetime.timedelta(hours=2)
-        post_dt = datetime.datetime.now() - datetime.timedelta(weeks=1)
+        post_dt = datetime.datetime.now() - datetime.timedelta(days=3)
         active = Q(update__created_time__gt=post_dt)
         fl = list(base_query.filter(Q(last_update__lt=update_dt) & active).distinct())
-        self.logger.debug("%d feeds that are active" % len(fl))
+        self.logger.info("%d feeds that are active" % len(fl))
         _append_without_dupes(feed_list, fl)
 
-        self.logger.debug("updating a total of %d feeds" % len(feed_list))
+        self.logger.info("updating a total of %d feeds" % len(feed_list))
 
         return feed_list
 
