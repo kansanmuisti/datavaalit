@@ -34,6 +34,8 @@ class CandidateResource(ModelResource):
     person = fields.ToOneField('political.api.PersonResource', 'person')
     municipality = fields.ToOneField('geo.api.MunicipalityResource',
                                      'municipality', null=True)
+    party = fields.ToOneField('political.api.PartyResource', 'party')
+
     def dehydrate(self, bundle):
         person = bundle.obj.person
         bundle.data['person_name'] = unicode(person)
@@ -46,10 +48,12 @@ class CandidateResource(ModelResource):
         filtering = {
             "municipality": ('exact', 'in'),
             "election": ('exact', 'in'),
+            "party": ('exact', 'in'),
         }
 
 
-from social.api import FeedResource
+from social.api import FeedResource, UpdateResource
+from social.models import Update
 class CandidateFeedResource(FeedResource):
     candidate = fields.ToOneField('political.api.CandidateResource',
                                   'candidate', full=True)
@@ -59,6 +63,41 @@ class CandidateFeedResource(FeedResource):
         filtering = {
             "candidate": ALL_WITH_RELATIONS,
         }
+
+class CandidateUpdateResource(UpdateResource):
+    candidate = fields.ToOneField('political.api.CandidateResource',
+                                  'feed__candidatefeed__candidate')
+    class Meta:
+        related = ('feed', 'feed__candidatefeed__candidate',
+                   'feed__candidatefeed__candidate__municipality')
+        queryset = Update.objects.all().order_by('-created_time')
+        for rel in related:
+            queryset = queryset.select_related(rel)
+        resource_name = 'candidate_social_update'
+        filtering = {
+            'candidate': ALL_WITH_RELATIONS,
+            'feed': ALL_WITH_RELATIONS,
+            'type': ALL,
+            'text': ALL,
+            'sub_type': ALL,
+            'created_time': ALL,
+            'origin_id': ('exact',),
+            'interest': ALL,
+        }
+
+    def dehydrate(self, bundle):
+        feed = bundle.obj.feed
+        candidate = feed.candidatefeed.candidate
+        bundle.data['candidate_first_name'] = candidate.person.first_name
+        bundle.data['candidate_last_name'] = candidate.person.last_name
+        bundle.data['candidate_party_code'] = candidate.party_code
+        bundle.data['candidate_municipality_name'] = candidate.municipality.name
+        bundle.data['feed_picture'] = feed.picture
+        bundle.data['feed_type'] = feed.type
+        bundle.data['feed_origin_id'] = feed.origin_id
+        bundle.data['feed_account_name'] = feed.account_name
+        return bundle
+
 
 class MunicipalityCommitteeResource(ModelResource):
     municipality = fields.ToOneField('geo.api.MunicipalityResource',

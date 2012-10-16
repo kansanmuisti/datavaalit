@@ -27,6 +27,17 @@ class Feed(models.Model):
         self.interest = feed_info.get('likes', None)
         return feed_info
 
+class BrokenFeed(models.Model):
+    type = models.CharField(max_length=2, choices=Feed.TYPE_CHOICES)
+    origin_id = models.CharField(max_length=100, db_index=True)
+    account_name = models.CharField(max_length=100, null=True)
+    check_time = models.DateTimeField(auto_now=True)
+    reason = models.CharField(max_length=50)
+
+    class Meta:
+        unique_together = (('type', 'origin_id'),)
+
+
 class Update(models.Model):
     feed = models.ForeignKey(Feed, db_index=True)
     text = models.CharField(max_length=4000, null=True)
@@ -35,11 +46,11 @@ class Update(models.Model):
     created_time = models.DateTimeField(db_index=True)
     origin_id = models.CharField(max_length=50, db_index=True)
     interest = models.PositiveIntegerField(null=True)
-    picture = models.URLField(null=True, max_length=250)
-    share_link = models.URLField(null=True, max_length=250)
+    picture = models.URLField(null=True, max_length=350)
+    share_link = models.URLField(null=True, max_length=350)
     share_title = models.CharField(null=True, max_length=250)
-    share_caption = models.CharField(null=True, max_length=500)
-    share_description = models.CharField(null=True, max_length=500)
+    share_caption = models.CharField(null=True, max_length=600)
+    share_description = models.CharField(null=True, max_length=600)
 
     class Meta:
         unique_together = (('feed', 'origin_id'),)

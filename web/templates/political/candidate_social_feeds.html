@@ -30,15 +30,18 @@
 			color: #d44413;
 		}
 	}
-	.update-time {
-		color: #aaa;
-		font-size: 80%;
+	.candidate-muni {
+		font-size: 90%;
+		float: right;
+		color: grey;
 	}
 	.share-media {
 		margin-top: 10px;
-		background-color: #eee;
+		background-color: #f8f8f8;
 		border: 1px solid #ddd;
 		overflow: hidden;
+		padding: 10px;
+		border-radius: 3px;
 	}
 	.share-picture {
 		float: left;
@@ -60,7 +63,22 @@
 		font-size: 90%;
 		padding-left: 20px;
 	}
-	
+	.bottom-row {
+		margin-top: 4px;
+	}
+	.interest-icon {
+		margin-left: 10px;
+		margin-top: 3px;
+	}
+	.update-time {
+		margin-left: 10px;
+		color: #aaa;
+		font-size: 80%;
+	}
+}
+
+time {
+	font-weight: bold;
 }
 
 </style>
@@ -72,6 +90,8 @@
 <script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
 <script type="text/javascript" src="{% static "js/backbone.js" %}"></script>
 <script type="text/javascript" src="{% static "js/backbone-tastypie.js" %}"></script>
+<script type="text/javascript" src="{% static "js/jstorage.js" %}"></script>
+<script type="text/javascript" src="{% static "js/jquery.ba-bbq.js" %}"></script>
 {% endcompress %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/moment.js" %}"></script>
@@ -91,7 +111,27 @@ SocialFeedList = Backbone.Tastypie.Collection.extend
   model: SocialFeed
 
 SocialUpdate = Backbone.Tastypie.Model.extend
-  urlRoot: '/api/v1/social_update/'
+  urlRoot: '/api/v1/candidate_social_update/'
+  get_permalink: ->
+    type = @.get('feed_type')
+    if type == 'FB'
+      return 'https://www.facebook.com/' + @.get('origin_id')
+    else if type == 'TW'
+      base_url = @.get_feed_permalink()
+      return base_url + '/status/' + @.get('origin_id')
+  get_feed_icon: ->
+    type = @.get('feed_type')
+    if type == 'FB'
+      icon = 'facebook.png'
+    else if type == 'TW'
+      icon = 'twitter.png'
+    return '/static/images/icons-16/' + icon
+  get_feed_permalink: ->
+    type = @.get('feed_type')
+    if type == 'FB'
+      return 'https://www.facebook.com/' + @.get('feed_origin_id')
+    else if type == 'TW'
+      return 'https://www.twitter.com/' + @.get('feed_account_name')
   get_feed: (feed_list) ->
     # A little hack to make sure we have compatible feed names
     if @.feed
@@ -105,7 +145,7 @@ SocialUpdate = Backbone.Tastypie.Model.extend
     return @.candidate
 
 SocialUpdateList = Backbone.Tastypie.Collection.extend
-  urlRoot: '/api/v1/social_update/'
+  urlRoot: '/api/v1/candidate_social_update/'
   model: SocialUpdate
 
 SocialUpdateView = Backbone.View.extend
@@ -117,36 +157,46 @@ SocialUpdateView = Backbone.View.extend
   render: ->
     args = @model.toJSON()
     args.created_time = moment(args.created_time)
-    _.extend args,
-      candidate: @.model.candidate
-      feed: @.model.feed.toJSON()
-    console.log @.$el
+    args.feed_icon = @model.get_feed_icon()
+    args.permalink = @model.get_permalink()
+    args.feed_permalink = @model.get_feed_permalink()
     @.$el.html @template(args)
     return @.$el
 
 AppView = Backbone.View.extend
   el: '#some-updates'
   initialize: ->
-    @.feed_list = new SocialFeedList
-    @.feed_list.on 'reset', @.reset_feeds, @
     @.update_list = new SocialUpdateList
     @.update_list.on 'add', @.add_one, @
     @.update_list.on 'reset', @.add_all, @
   add_one: (update) ->
-    console.log "add one", update
-    cand = update.get_candidate(@.feed_list)
     update_view = new SocialUpdateView {model: update}
-    console.log @
-    @.$el.append update_view.render()
+    @.$('#some-list').append update_view.render()
+  set_municipality: (muni_id) ->
+    if not muni_id
+      delete @.update_list.filters.candidate__municipality
+      args = {}
+    else
+      args = {candidate__municipality: muni_id}
+    @.set_filters args
+  set_party: (party_id, no_render) ->
+    if not party_id
+      delete @.update_list.filters.candidate__party
+      args = {}
+    else
+      args = {candidate__party: party_id}
+    @.set_filters args
   add_all: ->
-    console.log "add all"
-    this.$el.html('')
-    @.update_list.each @.add_one, @
-  reset_feeds: ->
-    console.log "reset feeds"
-    ids = (feed.get('id') for feed in @.feed_list.models)
-    _.extend @.update_list.filters,
-      feed__in: ids.join(',')
+    el = @.$('#some-list')
+    el.html('')
+    if @.update_list.length == 0
+      el.html('<h2>{% trans "No social media activity found." %}</h2>')
+    else
+      @.update_list.each @.add_one, @
+  set_filters: (filters) ->
+    delete @.update_list.filters.offset
+    _.extend @.update_list.filters, filters
+  render: ->
     @.update_list.fetch()
 
 api_fetch = (type, opts) ->
@@ -176,15 +226,53 @@ api_fetch = (type, opts) ->
       error: error_cb
   fetch_objs url
 
+window.selected_municipality = null
+window.selected_party = null
+
 jQuery ->
   app_view = new AppView
 
-  municipalities = {}
-  selected_municipality = 91
+  read_params_from_hash = ->
+    hash = window.location.hash
+    if hash.substring(0, 2) == "#?"
+      hash = hash.substring(2)
+    params = $.deparam(hash)
+    id = parseInt(params.municipality)
+    if !isNaN(id)
+      window.selected_municipality = id
+      params.municipality = id
+    else 
+      delete params.municipality
+    id = parseInt(params.party)
+    if !isNaN(id)
+      window.selected_party = id
+      params.party = id
+    else
+      delete params.party
+    return params
+  read_params_from_hash()
 
-  switch_muni = (muni_id) ->
-    selected_municipality = muni_id
-    fetch_feeds muni_id
+  update_location_hash = ->
+    params = {}
+    if window.selected_municipality
+      params.municipality = window.selected_municipality
+    if window.selected_party
+      params.party = window.selected_party
+    param_str = $.param(params)
+    if param_str
+      param_str = '#?' + param_str
+    else
+      param_str = '#'
+    console.log '"' + param_str + '"'
+    $.bbq.pushState param_str
+
+  set_muni = (muni_id) ->
+    window.selected_municipality = muni_id
+    app_view.set_municipality muni_id
+
+  set_party = (party_id) ->
+    window.selected_party = party_id
+    app_view.set_party party_id
     
   fetch_munis = ->
     api_fetch "municipality",
@@ -201,49 +289,121 @@ jQuery ->
           el = $("<option #{ selected }value=#{ muni.id }>#{ muni.name }</option>")
           el_list.append el
         $("#municipality-chooser").trigger "liszt:updated"
-        switch_muni selected_municipality
 
-  fetch_feeds = (muni_id) ->
-    _.extend app_view.feed_list.filters,
-      candidate__municipality: muni_id
-    app_view.feed_list.fetch()
+  fetch_parties = ->
+    api_fetch "party",
+      limit: 1000,
+      all: true,
+      callback: (objs) ->
+        party_list = _.sortBy objs, (obj) ->
+          return obj.abbrev
+        el_list = $("#party-chooser")
+        for party in party_list
+          if party.id == selected_party
+            selected = "selected "
+          else
+            selected = ""
+          el = $("<option #{ selected }value=#{ party.id }>#{ party.abbrev }</option>")
+          el_list.append el
+        $("#party-chooser").trigger "liszt:updated"
+        
 
-  $("#municipality-chooser").chosen().change((ev, args) ->
-    muni_id = parseInt(args.selected)
-    switch_muni muni_id
+  chosen_args = {allow_single_deselect: true}
+  $("#municipality-chooser").chosen(chosen_args).change((ev, args) ->
+    if not args
+      muni_id = null
+    else
+      muni_id = parseInt(args.selected)
+    set_muni muni_id
+    update_location_hash()
+    app_view.render()
   )
-
+  $("#party-chooser").chosen(chosen_args).change((ev, args) ->
+    if not args
+      party_id = null
+    else
+      party_id = parseInt(args.selected)
+    set_party party_id
+    update_location_hash()
+    app_view.render()
+  )
+  $(window).bind('hashchange', ->
+    params = read_params_from_hash()
+    if params.municipality
+      set_muni params.municipality
+    else
+      set_muni null
+    if params.party
+      set_party params.party
+    else
+      set_party null
+    app_view.render()
+  )
   fetch_munis()
+  fetch_parties()
+
+  $(window).scroll ->
+    w = $(window)
+    if w.scrollTop() + w.height() == $(document).height()
+      app_view.update_list.fetchNext()
+    
+  $("#technical-details-button").click ->
+    $("#technical-details-button").hide()
+    $("#technical-details").show()
+    return false
+  $("time").each ->
+    m_time = moment($(this).attr('datetime'))
+    $(this).html(m_time.from())
+
+  # Start the rendering
+  $(window).trigger('hashchange')
 </script>
 {% endcompress %}
 {% endblock %}
 
 {% block body %}
   <h1>Kunnallisvaaliehdokkaiden some-feedit</h1>
-  <div style="margin-bottom: 20px">
+  <div class="span8" style="overflow: hidden; clear: both">
+    <p>Tällä sivulla voit selata vuoden 2012 kunnallisvaaliehdokkaiden sosiaalisen median
+  päivityksiä. Voit rajata tarkastelun kunnan ja puolueen perusteella. Ehdokkaiden profiilien osoitteet on saatu <a href="https://vaalikone.yle.fi/">Ylen vaalikoneesta</a>.</p>
+    <p>Mukana on <strong>{{ tw.update_count|add:fb.update_count }}</strong> päivitystä. Päivityksiä haemme <strong>{{ tw.feed_count }}</strong> ehdokkaan Twitter-syötteestä ja <strong>{{ fb.feed_count }}</strong> ehdokkaan Facebook-sivulta. Tietoja on päivitetty viimeksi <time datetime="{{ last_update|date:"c" }}">{{ last_update }}</time>.</p>
+    <a id="technical-details-button" href="#">Lue lisää palvelun teknisistä yksityiskohdista »</a>
+    <div id="technical-details" class="hide">
+      <p>Sivu käyttää Datavaalit-projektin tietokantaa REST-rajapinnan yli.</p>
+      <p><a href="https://github.com/kansanmuisti/datavaalit">Koko sivuston lähdekoodi</a> on avoimesti saatavilla. Tämä sivu on ohjelmoitu <a href="http://coffeescript.org/">CoffeeScript-kielellä</a>. Sivun lähdekoodi on <a href="https://github.com/kansanmuisti/datavaalit/blob/master/web/templates/political/candidate_social_feeds.html">täällä</a>. REST-toiminnallisuuden toteuttaa <a href="http://backbonejs.org/">Backbone.js-kirjasto</a> ja suomenkieliset aikaleimat muotoilee <a href="http://momentjs.com/">Moment.js-kirjasto</a>.</p>
+    </div>
+  </div>
+  <div class="span8" style="margin-top: 20px; margin-bottom: 20px; clear: both">
     <select data-placeholder="{% trans "Choose a municipality" %}" id="municipality-chooser">
+      <option value=""></option>
+    </select>
+    <select data-placeholder="{% trans "Choose a party" %}" id="party-chooser">
+      <option value=""></option>
     </select>
   </div>
-  <div>
-    <ul id="some-updates" class="unstyled">
+  <div style="clear: both;" id="some-updates">
+    <ul id="some-list" class="unstyled">
     </ul>
   </div>
   <script type="text/template" id="some-update-template">
-    <a class="candidate-picture" href="#">
-      <% if (feed.picture) { %>
-      <img src="<%= feed.picture %>" />
+    <a class="candidate-picture" href="<%= feed_permalink %>">
+      <% if (feed_picture) { %>
+      <img src="<%= feed_picture %>" />
       <% } else { %>
       <div class="no-thumbnail"></div>
       <% } %>
     </a>
     <div class="update-info">
       <div class="candidate-id">
-        <a class="candidate-name" href="#"><%= candidate.person_name %></a> /
-        <span class="candidate-party"><%= candidate.party_code %></span>
+        <a class="candidate-name" href="<%= feed_permalink %>"><%= candidate_first_name %> <%= candidate_last_name %></a> /
+        <span class="candidate-party"><%= candidate_party_code %></span>
+        <% if (!selected_municipality) { %>
+        <span class="candidate-muni"><%= candidate_municipality_name %></span>
+        <% } %>
       </div>
       <div class="update-text"><%= text %></div>
       <% if (picture || share_link) { %>
-      <div class="share-media well-small">
+      <div class="share-media">
         <div style="clear: both">
         <div class="share-picture">
           <a href="<%= share_link %>"><img src="<%= picture %>" /></a>
@@ -258,7 +418,13 @@ jQuery ->
         </div>
       </div>
       <% } %>
-      <div class="update-time"><%= created_time.from() %></div>
+      <div class="bottom-row">
+        <a href="<%= permalink %>"><img class="feed-icon" src="<%= feed_icon %>"></a>
+        <span class="update-time"><%= created_time.from() %></span>
+        <% if (interest != null) { %>
+          <span class="interest"><i class="interest-icon icon-thumbs-up"></i> <%= interest %></span>
+        <% } %>
+      </div>
     </div>
   </script>
 {% endblock %}

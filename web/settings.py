@@ -43,6 +43,10 @@ CACHES = {
     }
 }
 
+# Deferred task execution system
+BROKER_URL = 'django://'
+CELERYD_CONCURRENCY = 1
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
@@ -241,7 +245,10 @@ INSTALLED_APPS = [
     "cms.plugins.text",
     "cms.plugins.teaser",
     "cmsplugin_markdown",
-    
+
+    "kombu.transport.django",
+    "djcelery",
+
     # Pinax
     "pinax.apps.account",
     "pinax.apps.signup_codes",
@@ -299,7 +306,9 @@ CMS_TEMPLATES = (
 )
 
 FACEBOOK_APP_ID="152378504906843"
-FACEBOOK_API_SECRET="a6d4aeadb6d7a73e90e4bca1e4b319dd"
+FACEBOOK_API_SECRET=""
+TWITTER_CONSUMER_KEY=""
+TWITTER_CONSUMER_SECRET=""
 
 # local_settings.py can be used to override environment-specific settings
 # like database and email that differ between development and production.
