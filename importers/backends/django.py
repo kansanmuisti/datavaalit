@@ -347,6 +347,8 @@ class DjangoBackend(Backend):
         expense_counter = 0
         missing_counter = 0
         
+        types = [etype['type'] for etype in expense_types]
+        
         for candidate_expenses in expenses:
             
             # Keep track if the candidate expenses were updated
@@ -355,7 +357,6 @@ class DjangoBackend(Backend):
             db.reset_queries()
             
             # Doest the candidate have any actual expenses (with numbers)
-            types = [etype['type'] for etype in expense_types]
             actual_expenses = set(candidate_expenses.keys()).intersection(types)
             
             # If there are no actual expenses, continue
@@ -364,13 +365,13 @@ class DjangoBackend(Backend):
             
             try:
                 # Construct a String to describe person at hand (candidate)
-                person_str = "%s %s (%s)" % (candidate_expenses['first_names'].encode('utf8') ,
-                                             candidate_expenses['last_name'].encode('utf8') ,
+                person_str = "%s %s (%s)" % (candidate_expenses['first_names'],
+                                             candidate_expenses['last_name'],
                                              candidate_expenses['municipality'] )
                 
                 # Municipality given as String, do a lookup for an integer id.
                 # Needed to identify the candidate
-                municipality_id = Municipality.objects.get(name=candidate_expenses['municipality']).id
+                municipality = Municipality.objects.get(name=candidate_expenses['municipality'])
                 
                 # Since expense reports can have several firstnames, try 
                 # following names as will if the 1st doesn't match. . 
@@ -387,19 +388,22 @@ class DjangoBackend(Backend):
                 
                 for first_name in first_names:
                     
-                    args = {'first_name__iexact': first_name, 
-                            'last_name__iexact': candidate_expenses['last_name'],
-                            'municipality': municipality_id}
-                    
+                    person_args = {'first_name__iexact': first_name, 
+                                   'last_name__iexact': candidate_expenses['last_name'],
+                                   'municipality': municipality.id}
+                    # This should be a dict {'type':'muni', 'year':2012}
+                    election_args = candidate_expenses['election']
                     try:
                         # TODO: is there a more concise way of doing this?
-                        person = Person.objects.get(**args)
-                        candidate = Candidate.objects.get(person=person)
-                        self.logger.debug("Found person %s with first name: %s." % (person_str, first_name.encode('utf-8')))
+                        person = Person.objects.get(**person_args)
+                        election = Election.objects.get(**election_args)
+                        candidate = Candidate.objects.get(person=person,
+                                                          election=election)
+                        self.logger.debug("Found person %s with first name: %s." % (person_str, first_name))
                         found = True
                         break
                     except Person.DoesNotExist:
-                        self.logger.debug("Could not find person %s with first name: %s." % (person_str, first_name.encode('utf-8')))
+                        self.logger.debug("Could not find person %s with first name: %s." % (person_str, first_name))
                         continue
                     
                 if not found:

@@ -77,8 +77,8 @@ class VaalirahoitusImporter(Importer):
             
             # TODO: implement name parsing (several names and canonical name)
             # first_names = row[0], last_name = row[1]
-            candidate_expenses['first_names'] = row[0].decode('utf-8')
-            candidate_expenses['last_name'] = row[1].decode('utf-8')
+            candidate_expenses['first_names'] = row[0]
+            candidate_expenses['last_name'] = row[1]
             candidate_name = candidate_expenses['first_names'] + ' ' + candidate_expenses['last_name']
             
             # Timestamp is used to record information on when information is 
@@ -105,10 +105,11 @@ class VaalirahoitusImporter(Importer):
                     self.logger.warning("Bad value for euros%s: %s" % (msg, e))
                     return(None)
             
-            # Voting district/municipality is needed in order to identidy 
-            # candidate. TODO: should the field mapping be done in some other
-            # way? NOTE: key 'municipality' is ok here, but could be something
-            # else in some other types of elections
+            # Voting district/municipality and election identifier are  needed 
+            # in order to identidy candidate. TODO: should the field mapping be 
+            # done in some other way? NOTE: key 'municipality' is ok here, but 
+            # could be something else in some other types of elections
+            candidate_expenses['election'] = {'type': 'muni', 'year': 2012}
             candidate_expenses['municipality'] = row[3]
             
             for expense_type in EXPENSE_TYPES:
