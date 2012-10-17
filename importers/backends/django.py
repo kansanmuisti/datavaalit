@@ -130,7 +130,7 @@ class DjangoBackend(Backend):
         return person
 
     def _validate_fb_feed(self, candidate, feed_name):
-        person_name = unicode(candidate.person).encode('utf8')
+        person_name = unicode(candidate).encode('utf8')
         feed_name = unicode(feed_name).encode('utf8')
         self.logger.debug("%s: Validating FB feed %s" % (person_name, feed_name))
 
@@ -190,7 +190,7 @@ class DjangoBackend(Backend):
         if bf:
             bf.delete()
 
-        origin_id = graph['id']
+        origin_id = unicode(graph['id'])
         if not cf:
             try:
                 cf = CandidateFeed.objects.get(type='FB', origin_id=origin_id)
@@ -198,7 +198,7 @@ class DjangoBackend(Backend):
             except CandidateFeed.DoesNotExist:
                 assert CandidateFeed.objects.filter(candidate=candidate, type='FB').count() == 0
                 cf = CandidateFeed(candidate=candidate, type='FB')
-                self.logger.info("%s: adding FB feed %s" % (person_name, origin_id))
+                self.logger.info("%s: adding FB feed %s" % (person_name, origin_id.encode('utf8')))
 
         cf.origin_id = origin_id
         cf.account_name = graph.get('username', None)
@@ -212,7 +212,7 @@ class DjangoBackend(Backend):
         bf.save()
 
     def _validate_twitter_feed(self, candidate, feed_name):
-        person_name = unicode(candidate.person).encode('utf8')
+        person_name = unicode(candidate).encode('utf8')
         feed_name = unicode(feed_name).encode('utf8')
         self.logger.debug("%s: Validating Twitter feed %s" % (person_name, feed_name))
 
@@ -263,7 +263,10 @@ class DjangoBackend(Backend):
 
         origin_id = str(res['id'])
         if not cf:
-            assert CandidateFeed.objects.filter(candidate=candidate, type='TW').count() == 0
+            feeds = CandidateFeed.objects.filter(candidate=candidate, type='TW')
+            if len(feeds):
+                self.logger.warning("%s: TW feed already found (screen name '%s')" % (person_name, cf.account_name))
+                return
             cf = CandidateFeed(candidate=candidate, type='TW')
             self.logger.info("%s: adding TW feed %s" % (person_name, origin_id))
 
