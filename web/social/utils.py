@@ -18,8 +18,9 @@ from django.db.models import Q
 from social.models import ApiToken, Feed, Update
 
 class UpdateError(Exception):
-    def __init__(self, msg, can_continue=False):
+    def __init__(self, msg, can_continue=False, feed_ok=False):
         self.can_continue = can_continue
+        self.feed_ok = feed_ok
         super(UpdateError, self).__init__(msg)
 
 TOKEN_URL = "https://graph.facebook.com/oauth/access_token?" + \
@@ -144,7 +145,7 @@ class FeedUpdater(object):
                 raise UpdateError(e.msg, can_continue=True)
             self.logger.error("Got Twitter exception: %s" % e)
             if "Rate limit exceeded" in e.msg:
-                raise UpdateError("Rate limit exceeded", can_continue=False)
+                raise UpdateError("Rate limit exceeded", can_continue=False, feed_ok=True)
             raise UpdateError(e.msg)
         feed.interest = info['followers_count']
         feed.picture = info['profile_image_url']
@@ -164,7 +165,7 @@ class FeedUpdater(object):
                     if 'Unauthorized:' in e.msg:
                         raise UpdateError(e.msg, can_continue=True)
                     if "Rate limit exceeded" in e.msg:
-                        raise UpdateError("Rate limit exceeded", can_continue=False)
+                        raise UpdateError("Rate limit exceeded", can_continue=False, feed_ok=True)
                     raise UpdateError(e.msg)
                 break
             if 'error' in tweets:
@@ -336,24 +337,19 @@ class FeedUpdater(object):
         return self.process_facebook_feed(feed)
 
     def update_feeds(self):
-        feed_list = self.find_feeds_to_update("TW")
-        for feed in feed_list:
-            try:
-                self.process_feed(feed)
-            except UpdateError as e:
-                feed.update_error_count += 1
-                feed.save()
-                if not e.can_continue:
-                    break
-        feed_list = self.find_feeds_to_update("FB")
-        for feed in feed_list:
-            try:
-                self.process_feed(feed)
-            except UpdateError as e:
-                feed.update_error_count += 1
-                feed.save()
-                if not e.can_continue:
-                    break
+        feed_types = ("TW", "FB")
+        for ft in feed_types:
+            feed_list = self.find_feeds_to_update(ft)
+            for feed in feed_list:
+                try:
+                    self.process_feed(feed)
+                except UpdateError as e:
+                    if not e.feed_ok:
+                        feed.update_error_count += 1
+                        feed.last_update = datetime.datetime.now()
+                        feed.save()
+                    if not e.can_continue:
+                        break
 
 def get_facebook_graph(graph_id):
     token = get_facebook_token()
