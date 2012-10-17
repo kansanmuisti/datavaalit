@@ -351,6 +351,10 @@ jQuery ->
     $("#technical-details-button").hide()
     $("#technical-details").show()
     return false
+  $("#info-faq-button").click ->
+    $("#info-faq-button").hide()
+    $("#info-faq").show()
+    return false
   $("time").each ->
     m_time = moment($(this).attr('datetime'))
     $(this).html(m_time.from())
@@ -367,10 +371,19 @@ jQuery ->
     <p>Tällä sivulla voit selata vuoden 2012 kunnallisvaaliehdokkaiden sosiaalisen median
   päivityksiä. Voit rajata tarkastelun kunnan ja puolueen perusteella. Ehdokkaiden profiilien osoitteet on saatu <a href="https://vaalikone.yle.fi/">Ylen vaalikoneesta</a>.</p>
     <p>Mukana on <strong>{{ tw.update_count|add:fb.update_count }}</strong> päivitystä. Päivityksiä haemme <strong>{{ tw.feed_count }}</strong> ehdokkaan Twitter-syötteestä ja <strong>{{ fb.feed_count }}</strong> ehdokkaan Facebook-sivulta. Tietoja on päivitetty viimeksi <time datetime="{{ last_update|date:"c" }}">{{ last_update }}</time>.</p>
-    <a id="technical-details-button" href="#">Lue lisää palvelun teknisistä yksityiskohdista »</a>
+    <div><a id="info-faq-button" href="#">Miksi tietojani ei näy palvelussa? »</a></div>
+    <div id="info-faq" class="hide">
+      <p>Tiedot on saatu automaattisesti Ylen vaalikoneesta. Jos olet rekisteröinyt oman FB-sivusi vaalikoneeseen, homma voi vielä mennä pieleen seuraavilla tavoilla:</p>
+      <ul>
+        <li>Olet linkittänyt henkilökohtaisen FB-profiilisi. Koska palvelu hakee <em>kaikki</em> päivitykset, myös vuosia vanhat, jätimme henkilökohtaiset profiilit pois ehdokkaiden yksityisyydensuojan takia. Voimme <a href="https://www.facebook.com/groups/datavaalit/">eri pyynnöstä</a> lisätä palveluun myös henkilökohtaisen profiilisi.</li>
+        <li>Olet linkittänyt ryhmäsivun. Palveluumme on otettu mukaan ainoastaan julkiset FB-sivut. FB-ryhmät ovat luonteeltaan sen verran erilaisia, ettei vertailu helposti onnistu.</li>
+      </ul>
+    </div>
+    <div><a id="technical-details-button" href="#">Lue lisää palvelun teknisistä yksityiskohdista »</a></div>
     <div id="technical-details" class="hide">
       <p>Sivu käyttää Datavaalit-projektin tietokantaa REST-rajapinnan yli.</p>
       <p><a href="https://github.com/kansanmuisti/datavaalit">Koko sivuston lähdekoodi</a> on avoimesti saatavilla. Tämä sivu on ohjelmoitu <a href="http://coffeescript.org/">CoffeeScript-kielellä</a>. Sivun lähdekoodi on <a href="https://github.com/kansanmuisti/datavaalit/blob/master/web/templates/political/candidate_social_feeds.html">täällä</a>. REST-toiminnallisuuden toteuttaa <a href="http://backbonejs.org/">Backbone.js-kirjasto</a> ja suomenkieliset aikaleimat muotoilee <a href="http://momentjs.com/">Moment.js-kirjasto</a>.</p>
+      <p>Voit pyytää tietojesi poistoa sähköpostitse (<a href="mailto:info@datavaalit.fi">info@datavaalit.fi</a>) tai <a href="https://www.facebook.com/groups/datavaalit/">FB-ryhmässämme</a>.</p>
     </div>
   </div>
   <div class="span8" style="margin-top: 20px; margin-bottom: 20px; clear: both">
