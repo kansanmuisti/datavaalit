@@ -25,6 +25,10 @@ from web.social.utils import FeedUpdater, UpdateError
 from web.social.models import BrokenFeed
 
 class DjangoBackend(Backend):
+    def __init__(self, *args, **kwargs):
+        self.disable_twitter = False
+        super(DjangoBackend, self).__init__(*args, **kwargs)
+
     def submit_elections(self, elections):
         count = 0
         for el in elections:
@@ -142,8 +146,8 @@ class DjangoBackend(Backend):
                 cf = CandidateFeed.objects.get(type='FB', **args)
                 self.logger.debug("%s: Feed %s found" % (person_name, feed_name))
                 if cf.candidate != candidate:
-                    other_name = unicode(candidate.person).encode('utf8')
-                    self.logger.warning("%s: Found feed (%s) was for %s" %
+                    other_name = unicode(cf.candidate.person).encode('utf8')
+                    self.logger.warning("%s: Found FB feed (%s) was for %s" %
                         (person_name, feed_name, other_name))
                 if not self.replace:
                     return
@@ -194,10 +198,18 @@ class DjangoBackend(Backend):
             except CandidateFeed.DoesNotExist:
                 assert CandidateFeed.objects.filter(candidate=candidate, type='FB').count() == 0
                 cf = CandidateFeed(candidate=candidate, type='FB')
+                self.logger.info("%s: adding FB feed %s" % (person_name, origin_id))
 
         cf.origin_id = origin_id
         cf.account_name = graph.get('username', None)
         cf.save()
+
+    def _mark_broken(self, feed_type, feed_id, reason):
+        self.logger.warning("Marking %s feed %s as broken (%s)" % (feed_type, feed_id, reason))
+        args = {'type': feed_type, 'origin_id': feed_id}
+        bf, created = BrokenFeed.objects.get_or_create(**args)
+        bf.reason = reason
+        bf.save()
 
     def _validate_twitter_feed(self, candidate, feed_name):
         person_name = unicode(candidate.person).encode('utf8')
@@ -216,8 +228,8 @@ class DjangoBackend(Backend):
             cf = CandidateFeed.objects.get(type='TW', **orm_args)
             self.logger.debug("%s: Feed %s found" % (person_name, feed_name))
             if cf.candidate != candidate:
-                other_name = unicode(candidate.person).encode('utf8')
-                self.logger.warning("%s: Found feed (%s) was for %s" %
+                other_name = unicode(cf.candidate.person).encode('utf8')
+                self.logger.warning("%s: Found TW feed (%s) was for %s" %
                     (person_name, feed_name, other_name))
             if not self.replace:
                 return
@@ -240,6 +252,10 @@ class DjangoBackend(Backend):
             res = twitter.showUser(**tw_args)
         except TwythonError as e:
             self.logger.error('Twitter error: %s', e)
+            if e.msg.startswith('Not Found:'):
+                self._mark_broken("TW", feed_name, "not-found")
+            elif e.msg.startswith('Bad Request:') and 'Rate limit exceeded' in e.msg:
+                self.disable_twitter = True
             return
         except ConnectionError as e:
             self.logger.error('Connection error: %s', e)
@@ -249,6 +265,7 @@ class DjangoBackend(Backend):
         if not cf:
             assert CandidateFeed.objects.filter(candidate=candidate, type='TW').count() == 0
             cf = CandidateFeed(candidate=candidate, type='TW')
+            self.logger.info("%s: adding TW feed %s" % (person_name, origin_id))
 
         cf.origin_id = origin_id
         cf.account_name = res.get('screen_name', None)
@@ -273,7 +290,7 @@ class DjangoBackend(Backend):
             db.reset_queries()
             new_muni = muni_dict[int(c['municipality']['code'])]
             if new_muni != muni:
-                self.logger.debug("saving candidates from %s" % new_muni.name)
+                self.logger.info("saving candidates from %s" % new_muni.name)
             muni = new_muni
             c['municipality'] = muni
 
@@ -312,15 +329,14 @@ class DjangoBackend(Backend):
                 social = c['social']
                 if 'fb_feed' in social:
                     self._validate_fb_feed(candidate, social['fb_feed'])
-                if 'tw_feed' in social:
+                if 'tw_feed' in social and not self.disable_twitter:
                     self._validate_twitter_feed(candidate, social['tw_feed'])
 
             count += 1
 
         self.logger.info("%d candidates updated" % count)
-        
+
     def submit_prebudgets(self, expenses, expense_types):
-        
         # First, populate ExpenseType table if not populated already
         etypes = ExpenseType.objects.all()
         # TODO: should there be an option for adding new types? Now it's 
