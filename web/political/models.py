@@ -52,6 +52,12 @@ class Candidate(models.Model):
     election = models.ForeignKey(Election, db_index=True)
     municipality = models.ForeignKey(Municipality, null=True, db_index=True)
 
+    def __unicode__(self):
+        el = self.election
+        p = self.person
+        return u"%s (#%d from %s, %s %d)" % (unicode(p),
+                self.number, unicode(self.municipality), el.type, el.year)
+
 class VotingDistrict(models.Model):
     municipality = models.ForeignKey(Municipality)
     # Lists the elections for which this district is valid
