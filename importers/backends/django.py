@@ -9,6 +9,7 @@ import pinax
 import pinax.env
 import pyfaceb
 from twython import Twython, TwythonError
+from requests import ConnectionError
 
 my_path = os.path.abspath(os.path.dirname(__file__))
 project_path = os.path.normpath(my_path + '/../../web')
@@ -240,6 +241,9 @@ class DjangoBackend(Backend):
         except TwythonError as e:
             self.logger.error('Twitter error: %s', e)
             return
+        except ConnectionError as e:
+            self.logger.error('Connection error: %s', e)
+            return
 
         origin_id = str(res['id'])
         if not cf:
@@ -402,6 +406,7 @@ class DjangoBackend(Backend):
                         self.logger.debug("Found person %s with first name: %s." % (person_str, first_name))
                         found = True
                         break
+                    
                     except Person.DoesNotExist:
                         self.logger.debug("Could not find person %s with first name: %s." % (person_str, first_name))
                         continue
