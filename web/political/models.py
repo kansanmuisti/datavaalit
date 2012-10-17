@@ -1,5 +1,6 @@
 from django.contrib.gis.db import models
 from geo.models import Municipality
+from social.models import Feed
 
 class Election(models.Model):
     TYPE_CHOICES = (
@@ -74,8 +75,21 @@ class MunicipalityTrustee(models.Model):
     begin = models.DateField()
     end = models.DateField()
 
-
-from social.models import Feed
-
 class CandidateFeed(Feed):
     candidate = models.ForeignKey(Candidate)
+    
+class ExpenseType(models.Model):
+    '''Models different types of expenses a campaign can have.
+    '''
+    type = models.CharField(max_length=25)
+    description = models.CharField(max_length=100)
+    
+class Expense(models.Model):
+    '''Models different election campaign expenses.
+    '''
+
+    candidate = models.ForeignKey(Candidate, db_index=True)
+    expense_type = models.ForeignKey(ExpenseType)
+    sum = models.FloatField()
+    time_stamp = models.DateTimeField()
+    
