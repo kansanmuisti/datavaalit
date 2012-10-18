@@ -376,7 +376,11 @@ jQuery ->
         <li>Olet linkittänyt ryhmäsivun. Palveluumme on otettu mukaan ainoastaan julkiset FB-sivut. FB-ryhmät ovat luonteeltaan sen verran erilaisia, ettei vertailu helposti onnistu.</li>
       </ul>
       <h5>Mitä teen, jos päivitykseni puuttuvat tai haluan poistaa tietoni?</h5>
-      <p>Odota. Lisäämme muutospyyntökaavakkeen lähiaikoina.</p>
+      <p>Klikkaa tästä.
+        <a href="{% url political.views.candidate_change_request %}">
+          <button style="margin-top: -4px; margin-left: 8px;" class="btn-mini btn">Pyydä muutosta</button>
+        </a>
+      </p>
     </div>
     <div><a id="technical-details-button" href="#">Lue lisää palvelun teknisistä yksityiskohdista »</a></div>
     <div id="technical-details" class="hide">
