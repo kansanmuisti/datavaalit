@@ -32,25 +32,26 @@ class VaalirahoitusImporter(Importer):
     name = 'vrv'
     description = 'import candidate election budget (expenses + funding) from vaalirahoitusvalvonta.fi'
     country = 'fi'
-    
+
     def _import_prebudgets_from_csv(self, reader, timestamp):
-        
         # A list to hold reported expenses
-        expenses = []
-        
+        candidates = []
+
         # Fill in the field mapping descriptors
         header = reader.next()
+        expense_types = []
         for expense_type in EXPENSE_TYPES:
-            expense_type['description'] = header[expense_type['index']].decode('utf-8').strip("'")
-        
+            et = {'name': expense_type['type']}
+            et['description'] = header[expense_type['index']].decode('utf-8').strip("'")
+            expense_types.append(et)
+
         for row in reader:
-            
-            #row = [item.decode('utf-8') for item in row]
-            
+            row = [item.decode('utf-8') for item in row]
+
             # If there are no items for some reason, continue
             if len(row) < 1:
                 continue
-            
+
             # Strip whitespaces form row
             row = [x.strip() for x in row]
             # Strip quotochars form row, TODO: this could be done more 
@@ -58,61 +59,47 @@ class VaalirahoitusImporter(Importer):
             row = [x.strip("'") for x in row]
             # Replaces commas with dots in decimal delimiters
             row = [x.replace(",", ".") for x in row]
-            
+
             # Create another ordered dict to hold the expenses of an individual
             # candidate
-            candidate_expenses = OrderedDict()
-            
+            cand = {}
+
             # TODO: implement name parsing (several names and canonical name)
             # first_names = row[0], last_name = row[1]
-            candidate_expenses['first_names'] = row[0]
-            candidate_expenses['last_name'] = row[1]
-            candidate_name = candidate_expenses['first_names'] + ' ' + candidate_expenses['last_name']
-            
-            def to_float(x, tag=candidate_name):
-                '''Tries to coerce euro sums into floats.
-                '''
-                if tag:
-                    msg = " (%s)" % tag
-                else:
-                    msg = ""
-                try:
-                    if x != '':
-                        fx = float(x)
-                        if fx < 0:
-                            raise ValueError("Spent euros negative")
-                        else:
-                            return(fx)
-                    else:
-                        return(None)
-                except ValueError, e:
-                    self.logger.warning("Bad value for euros%s: %s" % (msg, e))
-                    return(None)
-            
-            # Voting district/municipality and election identifier are  needed 
-            # in order to identidy candidate. TODO: should the field mapping be 
-            # done in some other way? NOTE: key 'municipality' is ok here, but 
-            # could be something else in some other types of elections
-            candidate_expenses['election'] = {'type': 'muni', 'year': 2012}
-            candidate_expenses['municipality'] = row[3]
-            
+            cand['first_names'] = row[0]
+            cand['last_name'] = row[1]
+            candidate_name = cand['first_names'] + ' ' + cand['last_name']
+            cand['municipality'] = {'name': row[3]}
+
+            expenses = []
             for expense_type in EXPENSE_TYPES:
                 # Only record the expense type if there is a value associated 
                 # to it
-                value = to_float(row[expense_type['index']])
-                if value:
-                    candidate_expenses[expense_type['type']] = value
-            
-            candidate_expenses['timestamp'] = timestamp
-            
-            expenses.append(candidate_expenses)
-        
+                value = row[expense_type['index']]
+                if not value:
+                    continue
+                value = value.replace(',', '.')
+                # Just make sure the number converts into a float.
+                # We won't pass the converted value because we might
+                # store the value in a DecimalField.
+                try:
+                    x = float(value)
+                except:
+                    self.logger.error("%s %s: invalid value: %s" % (candidate_name, expense_type['type'], value))
+                    continue
+                expenses.append({'type': expense_type['type'], 'value': value})
+
+            cand['expenses'] = expenses
+            cand['timestamp'] = timestamp
+
+            candidates.append(cand)
+
+        election = {'type': 'muni', 'year': 2012}
         # EXPENSE_TYPES is also returned; backend may have to populate e.g. a 
         # DB table with the information
-        self.backend.submit_prebudgets(expenses, EXPENSE_TYPES)
-    
+        self.backend.submit_prebudgets(election, expense_types, candidates)
+
     def import_prebudgets(self, backlog=False):
-           
         # Construct a list of tuples, wher in each tuple the first item is the
         # actial url and the second one is a timestamp describing when the 
         # information was recorded

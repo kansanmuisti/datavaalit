@@ -43,6 +43,14 @@ class Person(models.Model):
     def __unicode__(self):
         return u"%s %s" % (self.first_name, self.last_name)
 
+class CandidateManager(models.Manager):
+    def by_name(self, name):
+        names = name.split(' ')
+        names = [n.strip() for n in names]
+        last_name = names[-1]
+        first_names = ' '.join(names[0:-1])
+        return self.filter(person__first_name=first_names, person__last_name=last_name)
+
 class Candidate(models.Model):
     person = models.ForeignKey(Person)
     number = models.PositiveIntegerField()
@@ -83,19 +91,26 @@ class MunicipalityTrustee(models.Model):
 
 class CandidateFeed(Feed):
     candidate = models.ForeignKey(Candidate)
-    
+
 class ExpenseType(models.Model):
     '''Models different types of expenses a campaign can have.
     '''
-    type = models.CharField(max_length=25)
+    name = models.CharField(max_length=25, unique=True)
     description = models.CharField(max_length=100)
-    
+
 class Expense(models.Model):
     '''Models different election campaign expenses.
     '''
-
     candidate = models.ForeignKey(Candidate, db_index=True)
-    expense_type = models.ForeignKey(ExpenseType)
-    sum = models.FloatField()
-    time_stamp = models.DateTimeField()
-    
+    type = models.ForeignKey(ExpenseType)
+    sum = models.DecimalField(max_digits=15, decimal_places=2)
+    time_added = models.DateTimeField()
+
+    class Meta:
+        unique_together = (('candidate', 'type'),)
+
+class ExpenseHistory(models.Model):
+    '''Stores the date the candidate first left their
+       campaign expense report.'''
+    candidate = models.ForeignKey(Candidate, db_index=True)
+    time_added = models.DateTimeField()

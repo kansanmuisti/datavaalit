@@ -26,27 +26,28 @@ from web.social.utils import FeedUpdater, UpdateError
 from web.social.models import BrokenFeed
 
 # Hardcoded match table to fix known problems with candidate names. 
-MATCH_TABLE = {'Teijo Tapani Harinen (Espoo)' : {'first_name': 'Tessu Tapani'},
-               'Tito Eugénio Moreira Sanches de Magalhaes (Rovaniemi)':  {'last_name': 'Moreira Sanches de Magalhães'},
-               'Veikko Tapio Valkonen (Kerava)':  {'first_name': 'Veikko T'},
-               'Maija-Liisa Välimäki (Turku)':  {'first_name': 'Maija (Maija-Liisa)'},
-               'Marjokaisa Piironen (Kirkkonummi)':  {'first_name': 'Kaisa'},
-               'Markku Olavi Tabell (Kirkkonummi':  {'first_name': 'Max'},
-               'Simon Francisco Riestra Aedo (Tampere)':  {'first_name': 'Simón'},
-               'Veli Matti Johannes Tikkaoja (Vaasa)':  {'first_name': 'Veli-Matti'},
-               'Olavi Ensio Kokkonen (Jyväskylä)':  {'first_name': 'Olavi E.'},
-               'Marja Leena Kukkasmäki (Pori)':  {'first_name': 'Marja-Leena'},
-               'Kirsi Margit Heikkinen-Jokilahti (Savonlinna)':  {'first_name': 'Kirsi Margit'},
-               'Erkki Juhani Nikulainen (Helsinki)':  {'first_name': 'Erkki (Eki)'},
-               'Riitta Maria Katriina Juva (Helsinki)':  {'first_name': 'Katriina (Kati)'},
-               'Silja Maria Borgarsdòttir Sandelin (Helsinki)':  {'first_name': 'Silja Borgarsdóttir'},
-               'Janne Petri Hukkinen (Helsinki)':  {'first_name': 'Janne P.'},
-               'Jeja Pekka Roos (Helsinki)': {'first_name': 'J.P.'},
-               'Marjo Helli Anneli Huusko (Helsinki)': {'first_name': 'Marjo (Mari)'},
-               'Sirkka Liisa Ikkala (Kempele)': {'first_name': 'Sirkka-Liisa'},
-               'Olli Pekka Hatanpää (Vihti)': {'first_name': 'Olli Pekka'},
-               'Martti Kustaa Lehto (Lahti)': {'first_name': 'Martti K.'}
-               }
+MATCH_TABLE = {
+    'Teijo Tapani Harinen (Espoo)' : {'first_name': 'Tessu Tapani'},
+    'Tito Eugénio Moreira Sanches de Magalhaes (Rovaniemi)':  {'last_name': 'Moreira Sanches de Magalhães'},
+    'Veikko Tapio Valkonen (Kerava)':  {'first_name': 'Veikko T'},
+    'Maija-Liisa Välimäki (Turku)':  {'first_name': 'Maija (Maija-Liisa)'},
+    'Marjokaisa Piironen (Kirkkonummi)':  {'first_name': 'Kaisa'},
+    'Markku Olavi Tabell (Kirkkonummi)':  {'first_name': 'Max'},
+    'Simon Francisco Riestra Aedo (Tampere)':  {'first_name': 'Simón'},
+    'Veli Matti Johannes Tikkaoja (Vaasa)':  {'first_name': 'Veli-Matti'},
+    'Olavi Ensio Kokkonen (Jyväskylä)':  {'first_name': 'Olavi E.'},
+    'Marja Leena Kukkasmäki (Pori)':  {'first_name': 'Marja-Leena'},
+    'Kirsi Margit Heikkinen-Jokilahti (Savonlinna)':  {'first_name': 'Kirsi Margit'},
+    'Erkki Juhani Nikulainen (Helsinki)':  {'first_name': 'Erkki (Eki)'},
+    'Riitta Maria Katriina Juva (Helsinki)':  {'first_name': 'Katriina (Kati)'},
+    'Silja Maria Borgarsdòttir Sandelin (Helsinki)':  {'first_name': 'Silja Borgarsdóttir'},
+    'Janne Petri Hukkinen (Helsinki)':  {'first_name': 'Janne P.'},
+    'Jeja Pekka Roos (Helsinki)': {'first_name': 'J.P.'},
+    'Marjo Helli Anneli Huusko (Helsinki)': {'first_name': 'Marjo (Mari)'},
+    'Sirkka Liisa Ikkala (Kempele)': {'first_name': 'Sirkka-Liisa'},
+    'Olli Pekka Hatanpää (Vihti)': {'first_name': 'Olli Pekka'},
+    'Martti Kustaa Lehto (Lahti)': {'first_name': 'Martti K.'}
+}
 
 class DjangoBackend(Backend):
     def __init__(self, *args, **kwargs):
@@ -363,169 +364,158 @@ class DjangoBackend(Backend):
 
         self.logger.info("%d candidates updated" % count)
 
-    def submit_prebudgets(self, expenses, expense_types):
+    def _find_person(self, info):
+        person_str = "%s %s (%s)" % (info['first_names'],
+                                     info['last_name'],
+                                     info['municipality'].name)
+
+        # Since expense reports can have several firstnames, try
+        # following names as well if the 1st doesn't match.
+        # TODO: heuristics here could be done smarter
+        first_names = info['first_names'].split()
+
+        # Break two-part names ("John-Peter") into to individual names 
+        # in case one of them is the primary first name
+        for first_name in first_names:
+            if '-' in first_name:
+                first_names += first_name.split('-')
+
+        # If it's in the match table, it needs to be in the database, too.
+        # Otherwise it's a bug.
+        if MATCH_TABLE.has_key(person_str):
+            fix_item = MATCH_TABLE[person_str]
+            person_args = {'first_name__iexact': first_names[0],
+                           'last_name__iexact': info['last_name'],
+                           'municipality': info['municipality']}
+            for k in fix_item.keys():
+                person_args['%s__iexact' % k] = fix_item[k]
+
+            self.logger.debug("Trying %s with fixed name" % person_str)
+            return Person.objects.get(**person_args)
+
+        for first_name in first_names:
+            person_args = {'first_name__iexact': first_name, 
+                           'last_name__iexact': info['last_name'],
+                           'municipality': info['municipality']}
+            try:
+                person = Person.objects.get(**person_args)
+                self.logger.debug("Found person %s with first name: %s." % (person_str, person_args['first_name__iexact']))
+                return person
+            except Person.DoesNotExist:
+                self.logger.debug("Could not find person %s with first name: %s" % (person_str, person_args['first_name__iexact']))
+
+
+        return None
+
+    def submit_prebudgets(self, election, expense_types, candidates):
+        election = Election.objects.get(type=election['type'], year=election['year'])
+
         # First, populate ExpenseType table if not populated already
-        etypes = ExpenseType.objects.all()
-        # TODO: should there be an option for adding new types? Now it's 
-        # all-or-nothing. Could also be a check for provided expense types vs
-        # the ones already in the database
-        if not etypes:
-            for expense_type in expense_types:
-                etype = ExpenseType(type=expense_type['type'],
-                                    description=expense_type['description'])
-                etype.save()
-            self.logger.debug("%s expense types added" % len(expense_types))
-        else:
-            self.logger.debug("No expense types to add")
-                 
-        # Populate the cancdidate expenses reporting table
+        stored_types = list(ExpenseType.objects.all())
+        count = 0
+        for et in expense_types:
+            for et_obj in stored_types:
+                if et_obj.name != et['name']:
+                    continue
+                if not self.replace:
+                    break
+                et_obj.description = et['description']
+                et_obj.save()
+                break
+            else:
+                # Not found
+                et_obj = ExpenseType(name=et['name'],
+                                     description=et['description'])
+                et_obj.save()
+                count += 1
+        if count:
+            self.logger.info("%d new expense types added" % count)
+        # Replace the incoming list with the stored objects.
+        expense_types = ExpenseType.objects.all()
+
+        # Populate the candidate expenses reporting table
         # TODO: for now, there is only 1 timestamp per record (i.e. candidate)
         # and thus individual expense items cannot be compared on the basis of 
         # timestamp. Items are not updated, timestamp is only used to record
-        # when the report was submitted  
-        
+        # when the report was submitted
+
         # TODO: mathing candidates to Person objects should be done in more 
         # refined way. Expense reports have full name with potentially several
         # first names. This information should be uptadet in Person. New records
         # in Person are never created, queries will fail if person is not found.
-        
+
         candidate_counter = 0
         candidate_updates_counter = 0
         expense_counter = 0
         missing_counter = 0
-        
-        types = [etype['type'] for etype in expense_types]
-        
-        for candidate_expenses in expenses:
-            
+
+        for cand in candidates:
             # Keep track if the candidate expenses were updated
             updated = False
-            
+
             db.reset_queries()
-            
-            # Doest the candidate have any actual expenses (with numbers)
-            actual_expenses = set(candidate_expenses.keys()).intersection(types)
-            
-            # If there are no actual expenses, continue
-            if not actual_expenses:
+
+            # Municipality given as String, do a lookup for an integer id.
+            # Needed to identify the candidate
+            muni = Municipality.objects.get(name=cand['municipality']['name'])
+            cand['municipality'] = muni
+
+            # Construct a String to describe person at hand (candidate)
+            person_str = "%s %s (%s)" % (cand['first_names'],
+                                         cand['last_name'],
+                                         cand['municipality'])
+
+            person = self._find_person(cand)
+            # Give up, candidate can't be found
+            if not person:
+                self.logger.warning("Could not find person %s in table Person" % person_str)   
+                missing_counter += 1
                 continue
-            
+
             try:
-                # Construct a String to describe person at hand (candidate)
-                person_str = "%s %s (%s)" % (candidate_expenses['first_names'],
-                                             candidate_expenses['last_name'],
-                                             candidate_expenses['municipality'] )
-                
-                # Municipality given as String, do a lookup for an integer id.
-                # Needed to identify the candidate
-                municipality = Municipality.objects.get(name=candidate_expenses['municipality'])
-                
-                # Since expense reports can have several firstnames, try 
-                # following names as will if the 1st doesn't match. . 
-                # TODO: heuristics here could be done smarter
-                first_names = candidate_expenses['first_names'].split()
-                
-                # Break two-part names ("John-Peter") into to individual names 
-                # in case one of them is the primary first name
-                for first_name in first_names:
-                    if '-' in first_name:
-                        first_names += first_name.split('-')
-                
-                def _find_candidate(person_args, election_args):    
-                
-                    candidate = None
-                
-                    try:
-                        # TODO: is there a more concise way of doing this?
-                        person = Person.objects.get(**person_args)
-                        election = Election.objects.get(**election_args)
-                        candidate = Candidate.objects.get(person=person,
-                                                          election=election)
-                        self.logger.debug("Found person %s with first name: %s." % (person_str, person_args['first_name__iexact']))
-                    
-                    except Person.DoesNotExist:
-                        self.logger.debug("Could not find person %s with first name: %s." % (person_str, first_name))
-                
-                    return candidate
-                
-                # This should be a dict {'type':'muni', 'year':2012}
-                election_args = candidate_expenses['election']
-                
-                for first_name in first_names:
-                    
-                    person_args = {'first_name__iexact': first_name, 
-                                   'last_name__iexact': candidate_expenses['last_name'],
-                                   'municipality': municipality.id}
-                    
-                    candidate = _find_candidate(person_args, election_args)
-                    if candidate:
+                candidate = Candidate.objects.get(person=person,
+                                                  election=election)
+            except Candidate.DoesNotExist:
+                self.logger.error("Could not find candidate entry for %s" % person_str)
+                missing_counter += 1
+                continue
+
+            # What expenses (if any) has person got in the Expense table
+            db_expenses = list(Expense.objects.filter(candidate=candidate))
+
+            for exp in cand['expenses']:
+                for exp_type in expense_types:
+                    if exp_type.name == exp['type']:
                         break
-                    
-                # No luck with name heuristics, try the match table. Problem 
-                # can be related to both first names and last name
-                if MATCH_TABLE.has_key(person_str):
-                    fix_item = MATCH_TABLE[person_str]
-                    fix_type = fix_item.keys()[0]
-                    fix_value = fix_item.values()[0]
-                    
-                    self.logger.debug("Trying %s with fixed first name: %s." % (person_str, fix_value))
-                    
-                    if fix_type == 'first_name':
-                        person_args = {'first_name__iexact': fix_value, 
-                                       'last_name__iexact': candidate_expenses['last_name'],
-                                       'municipality': municipality.id}
-                        candidate = _find_candidate(person_args, election_args)
-                    elif fix_type == 'last_name':
-                        # FIXME: should loop over the first names again...
-                        pass
-                
-                # Give up, candidate can't be found
-                if not candidate:
-                    self.logger.warning("Could not find person %s in table Person" % person_str)   
-                    missing_counter += 1
-                    continue
-                
-                # What expenses (if any) has person got in the Expense table
-                db_expenses = Expense.objects.filter(candidate=candidate)
-                
-                for actual_expense in actual_expenses:
-                    # Get the id for the current expense type
-                    expense = ExpenseType.objects.get(type=actual_expense)
-                    
-                    # Is the expense id already recorded for this person
-                    expenses_in_db = [_expense.expense_type.id for _expense in db_expenses]
-                    
-                    if not db_expenses or expense.id not in expenses_in_db:
-                        # Create a new expense item
-                        sum_value = candidate_expenses[actual_expense]
-                        new_expense = Expense(candidate=candidate,
-                                              expense_type=expense,
-                                              sum=sum_value,
-                                              time_stamp=candidate_expenses['timestamp'])
-                        new_expense.save()
-                        msg = "New expense for %s: %s = %s" % (person_str, actual_expense, sum_value)
-                        self.logger.debug(msg)
-                        expense_counter += 1
-                        updated = True
-                        
-                candidate_counter += 1
-                if updated:
-                    candidate_updates_counter += 1 
-                
-            except Municipality.DoesNotExist:
-                self.logger.warning("Candidate %s: %s is not a known municipality" % (person_str,
-                                                                                    candidate_expenses['municipality']))
-                continue
-            
-            except Person.DoesNotExist:
-                self.logger.warning("Person %s could not be found in table Person" % person_str)
-                continue
-        
-        
-        self.logger.info("Added %s expenses for %s candidates" % (expense_counter,
+                else:
+                    raise Exception("Expense type not found. It's a bug!")
+
+                for exp_obj in db_expenses:
+                    if exp_obj.type.pk != exp_type.pk:
+                        continue
+                    if not self.replace:
+                        break
+                    exp_obj.sum = exp['value']
+                    exp_obj.save()
+                    break
+                else:
+                    # Create a new expense item
+                    new_expense = Expense(candidate=candidate,
+                                          type=exp_type,
+                                          sum=exp['value'],
+                                          time_added=cand['timestamp'])
+                    new_expense.save()
+                    msg = "New expense for %s: %s = %s" % (person_str, exp_type.name, new_expense.sum)
+                    self.logger.debug(msg)
+                    expense_counter += 1
+                    updated = True
+
+            if updated:
+                candidate_updates_counter += 1
+            candidate_counter += 1
+
+        self.logger.info("Processed %d candidates" % candidate_counter)
+        self.logger.info("Added %d expenses for %d candidates" % (expense_counter,
                                                                           candidate_updates_counter))
-        not_updated = len(expenses) - candidate_updates_counter
-        if not_updated > 0:
-            self.logger.info("%s candidates not updated" % not_updated)
         if missing_counter > 0:
-            self.logger.info("Could not match names for %s candidates" % missing_counter)
+            self.logger.warning("Could not match names for %d candidates" % missing_counter)

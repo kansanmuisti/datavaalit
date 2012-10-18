@@ -102,22 +102,15 @@ if options.imports:
         # We need to start logging after Django initializes
         # because Django can be configured to reset logging.
         logger = init_logging(debug=options.verbose)
-
-        if not options.disable_cache:
-            logger.debug("Setting up HTTP cache in %s" % cache_dir)
-        else:
-            logger.debug("HTTP caching disabled")
-        
         backend = DjangoBackend(logger, replace=options.replace)
     else:
         logger = init_logging(debug=options.verbose)
-        
-        if options.cache:
-            logger.debug("Setting up cache in %s" % cache_dir)
-        else:
-            logger.debug("Cache disabled")
-        
         backend = Backend(logger, replace=options.replace)
+
+    if not options.disable_cache:
+        logger.debug("Setting up HTTP cache in %s" % cache_dir)
+    else:
+        logger.debug("HTTP caching disabled")
 
     for imp_class in importer_list:
         if options.select_importer:
