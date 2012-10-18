@@ -227,6 +227,8 @@ class FeedUpdater(object):
                         # Sleep for a while before continuing.
                         time.sleep(0.5)
                         continue
+                    else:
+                        raise UpdateError(e.message)
         # If we got this far, the error repeated 3 times, so
         # we bail out.
         raise UpdateError(last_e.message)
