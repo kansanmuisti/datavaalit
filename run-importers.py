@@ -30,15 +30,14 @@ def init_logging(debug=False):
     logger.propagate = 0
     return logger
 
-def run_import(data_type, run_only=None):
+def run_import(data_type, run_only=None, **kwargs):
     for imp in importer_objs:
         import_func = getattr(imp, "import_%s" % data_type, None)
         if run_only and imp.name != run_only:
             continue
         if import_func:
             logger.info("Running importer '%s' for %s" % (imp.name, data_type))
-            import_func()
-
+            import_func(**kwargs)
 
 parser = OptionParser()
 parser.add_option("--list", help="list all importers", dest="list",
@@ -58,6 +57,12 @@ parser.add_option("-v", "--verbose", help="verbose output", dest="verbose",
 parser.add_option("--disable-cache", help="Disable file cache", dest="disable_cache",
                   action="store_true")
 
+# TODO: Parses option dependencies could be handled better. Backlog option is
+# relevant only for importers that import updating data. Backlog can be used
+# if there is a set of files (time series) that needs to be imported in order
+# to retain the temporal order of data items
+parser.add_option("-b", "--backlog", help="Import from backlog", dest="backlog",
+                  action="store_true", default=False)
 
 (options, args) = parser.parse_args()
 
@@ -74,7 +79,8 @@ if options.inspects:
 
 if options.imports:
     backend = None
-    DATA_TYPES = ("elections", "parties", "candidates", "prebudgets")
+    DATA_TYPES = ("elections", "parties", "candidates", "prebudgets", 
+                  "prebudgets_csv")
 
     for imp in options.imports:
         if imp not in DATA_TYPES:
@@ -126,4 +132,7 @@ if options.imports:
 
     for dt in DATA_TYPES:
         if dt in options.imports:
-            run_import(dt, run_only=options.select_importer)
+            if options.backlog:
+                run_import(dt, run_only=options.select_importer, backlog=True)
+            else:
+                run_import(dt, run_only=options.select_importer)

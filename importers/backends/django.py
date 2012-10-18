@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import os
 import sys
@@ -23,6 +24,29 @@ from web.geo.models import *
 from web.political.models import *
 from web.social.utils import FeedUpdater, UpdateError
 from web.social.models import BrokenFeed
+
+# Hardcoded match table to fix known problems with candidate names. 
+MATCH_TABLE = {'Teijo Tapani Harinen (Espoo)' : {'first_name': 'Tessu Tapani'},
+               'Tito Eugénio Moreira Sanches de Magalhaes (Rovaniemi)':  {'last_name': 'Moreira Sanches de Magalhães'},
+               'Veikko Tapio Valkonen (Kerava)':  {'first_name': 'Veikko T'},
+               'Maija-Liisa Välimäki (Turku)':  {'first_name': 'Maija (Maija-Liisa)'},
+               'Marjokaisa Piironen (Kirkkonummi)':  {'first_name': 'Kaisa'},
+               'Markku Olavi Tabell (Kirkkonummi':  {'first_name': 'Max'},
+               'Simon Francisco Riestra Aedo (Tampere)':  {'first_name': 'Simón'},
+               'Veli Matti Johannes Tikkaoja (Vaasa)':  {'first_name': 'Veli-Matti'},
+               'Olavi Ensio Kokkonen (Jyväskylä)':  {'first_name': 'Olavi E.'},
+               'Marja Leena Kukkasmäki (Pori)':  {'first_name': 'Marja-Leena'},
+               'Kirsi Margit Heikkinen-Jokilahti (Savonlinna)':  {'first_name': 'Kirsi Margit'},
+               'Erkki Juhani Nikulainen (Helsinki)':  {'first_name': 'Erkki (Eki)'},
+               'Riitta Maria Katriina Juva (Helsinki)':  {'first_name': 'Katriina (Kati)'},
+               'Silja Maria Borgarsdòttir Sandelin (Helsinki)':  {'first_name': 'Silja Borgarsdóttir'},
+               'Janne Petri Hukkinen (Helsinki)':  {'first_name': 'Janne P.'},
+               'Jeja Pekka Roos (Helsinki)': {'first_name': 'J.P.'},
+               'Marjo Helli Anneli Huusko (Helsinki)': {'first_name': 'Marjo (Mari)'},
+               'Sirkka Liisa Ikkala (Kempele)': {'first_name': 'Sirkka-Liisa'},
+               'Olli Pekka Hatanpää (Vihti)': {'first_name': 'Olli Pekka'},
+               'Martti Kustaa Lehto (Lahti)': {'first_name': 'Martti K.'}
+               }
 
 class DjangoBackend(Backend):
     def __init__(self, *args, **kwargs):
@@ -407,32 +431,59 @@ class DjangoBackend(Backend):
                     if '-' in first_name:
                         first_names += first_name.split('-')
                 
-                found = False
+                def _find_candidate(person_args, election_args):    
                 
-                for first_name in first_names:
-                    
-                    person_args = {'first_name__iexact': first_name, 
-                                   'last_name__iexact': candidate_expenses['last_name'],
-                                   'municipality': municipality.id}
-                    # This should be a dict {'type':'muni', 'year':2012}
-                    election_args = candidate_expenses['election']
+                    candidate = None
+                
                     try:
                         # TODO: is there a more concise way of doing this?
                         person = Person.objects.get(**person_args)
                         election = Election.objects.get(**election_args)
                         candidate = Candidate.objects.get(person=person,
                                                           election=election)
-                        self.logger.debug("Found person %s with first name: %s." % (person_str, first_name))
-                        found = True
-                        break
+                        self.logger.debug("Found person %s with first name: %s." % (person_str, person_args['first_name__iexact']))
                     
                     except Person.DoesNotExist:
                         self.logger.debug("Could not find person %s with first name: %s." % (person_str, first_name))
-                        continue
+                
+                    return candidate
+                
+                # This should be a dict {'type':'muni', 'year':2012}
+                election_args = candidate_expenses['election']
+                
+                for first_name in first_names:
                     
-                if not found:
+                    person_args = {'first_name__iexact': first_name, 
+                                   'last_name__iexact': candidate_expenses['last_name'],
+                                   'municipality': municipality.id}
+                    
+                    candidate = _find_candidate(person_args, election_args)
+                    if candidate:
+                        break
+                    
+                # No luck with name heuristics, try the match table. Problem 
+                # can be related to both first names and last name
+                if MATCH_TABLE.has_key(person_str):
+                    fix_item = MATCH_TABLE[person_str]
+                    fix_type = fix_item.keys()[0]
+                    fix_value = fix_item.values()[0]
+                    
+                    self.logger.debug("Trying %s with fixed first name: %s." % (person_str, fix_value))
+                    
+                    if fix_type == 'first_name':
+                        person_args = {'first_name__iexact': fix_value, 
+                                       'last_name__iexact': candidate_expenses['last_name'],
+                                       'municipality': municipality.id}
+                        candidate = _find_candidate(person_args, election_args)
+                    elif fix_type == 'last_name':
+                        # FIXME: should loop over the first names again...
+                        pass
+                
+                # Give up, candidate can't be found
+                if not candidate:
                     self.logger.warning("Could not find person %s in table Person" % person_str)   
                     missing_counter += 1
+                    continue
                 
                 # What expenses (if any) has person got in the Expense table
                 db_expenses = Expense.objects.filter(candidate=candidate)
