@@ -1,0 +1,142 @@
+{% extends "site_base.html" %}
+
+{% load i18n static compress %}
+{% load static %}
+
+{% block head_title %}Ehdokkaan muutospyyntö{% endblock %}
+
+{% block extra_style %}
+{% endblock %}
+
+{% block extra_script %}
+{% compress js %}
+<script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
+{% endcompress %}
+{% compress js %}
+<script type="text/javascript" src="{% static "js/chosen.jquery.min.js" %}"></script>
+{% endcompress %}
+
+{% compress js %}
+<script type="text/coffeescript">
+
+api_fetch = (type, opts) ->
+  url = "/api/v1/#{ type }/?format=json"
+  if opts.limit
+    url += "&limit=" + opts.limit
+  else
+    url += "&limit=100"
+  if opts.search_args
+    url += "&" + opts.search_args
+  if opts.error_callback
+    error_cb = opts.error_callback
+  else
+    error_cb = ->
+      alert "{% trans "Communication with server failed" %}"
+  objs = []
+  fetch_objs = (url) ->
+    $.ajax url,
+      dataType: "json"
+      success: (data) ->
+        objs = objs.concat data.objects
+        if data.meta.next && opts.all
+          fetch_objs data.meta.next
+        else
+          opts.callback objs
+      error: error_cb
+  fetch_objs url
+
+jQuery ->
+  candidate = null
+  muni_id = null
+
+  muni_list = {{ muni_json|safe }}
+  target_el = $("#municipality-chooser")
+  for muni in muni_list
+    target_el.append($("<option value=#{ muni[0] }>#{ muni[1] }</option>"))
+  $("#municipality-chooser").chosen()
+  $("#fetch-button").click ->
+    sel_el = $("#municipality-chooser option:selected")
+    muni_id = sel_el.attr('value')
+    if not muni_id
+      return false
+    cand_nr = $("#candidate-number").val()
+    if not cand_nr
+      return false
+    api_fetch "candidate",
+      search_args: "municipality=#{ muni_id }&number=#{ cand_nr }"
+      callback: (objs) ->
+        if not objs.length
+          alert "Ehdokasta numerolla #{ cand_nr } ei löytynyt!"
+          return
+        candidate = objs[0]
+        api_fetch "candidate_social_feed",
+          search_args: "candidate=#{ candidate.id }"
+          callback: (objs) ->
+            render_candidate(candidate, objs)
+  render_candidate = (candidate, feeds) ->
+    $("#candidate-id").val(candidate.id)
+    template = _.template($("#candidate-template").html())
+    for f in feeds
+      if f.type == 'TW'
+        f.type = 'Twitter'
+      else if f.type == 'FB'
+        f.type = 'Facebook'
+      if not f.account_name
+        f.account_name = f.origin_id
+    candidate.feeds = feeds
+    html = template(candidate)
+    $("#candidate-info").html(html)
+    $("#change-form").show()
+</script>
+{% endcompress %}
+{% endblock %}
+
+{% block body %}
+  <h1>Kunnallisvaaliehdokkaan muutospyyntö</h1>
+  <div class="span8">
+    <p>Voit pyytää tietojesi lisäystä, muutosta tai poistoa allaolevalla kaavakkeella. Syötä
+    kuntasi ja ehdokasnumerosi sekä kerro mitä haluaisit että tiedoillesi tehdään.</p>
+    <div id="change-request-form">
+      <div class="chosen pull-left">
+        <select data-placeholder="Valitse kuntasi" id="municipality-chooser">
+          <option value=""></option>
+        </select>
+      </div>
+      <input class="input-medium" type="number" id="candidate-number" placeholder="Ehdokasnumerosi" min=2 max=10000>
+      <button style="margin-top: -8px" class="btn-success btn" id="fetch-button">OK</button>
+    </div>
+  </div>
+  <div style="clear: both; padding-top: 8px;" id="candidate-info">
+  </div>
+  <div id="change-form" class="span8 hide">
+    <form action="{% url political.views.candidate_change_request_form %}" method="POST">
+      <div>
+      <label>Pyyntösi</label>
+      <textarea rows="10" name="request"></textarea>
+      <input id="candidate-id" name="candidate-id" type="hidden" value="">
+      {% csrf_token %}
+      </div>
+      <input class="btn btn-success" type="submit" value="Lähetä">
+    </form>
+  </div>
+  <script type="text/template" id="candidate-template">
+    <dl class="dl-horizontal">
+      <dt>Nimi</dt>
+      <dd><%= person_name %></dd>
+      <dt>Puolue</dt>
+      <dd><%= party_code %></dd>
+      <dt>Ammatti</dt>
+      <dd><%= profession %></dd>
+      <dt>Syötteet</dt>
+      <dd><ul class="unstyled">
+        <% for (i in feeds) { %>
+          <li><%= feeds[i].type %>: <%= feeds[i].account_name %></li>
+        <% } %>
+        <% if (!feeds.length) { %>
+          <li>Ei syötteitä</li>
+        <% } %>	
+      </ul></dd>
+    </dl>
+  </script>
+{% endblock %}
+

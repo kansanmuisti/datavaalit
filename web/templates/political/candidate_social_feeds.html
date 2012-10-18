@@ -6,8 +6,6 @@
 {% block head_title %}Kunnallisvaaliehdokkaiden some-feedit{% endblock %}
 
 {% block extra_style %}
-<link rel="stylesheet" type="text/css" href="{% static "css/chosen.css" %}">
-
 {% compress css inline %}
 <style type="text/less">
 
@@ -90,7 +88,6 @@ time {
 <script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
 <script type="text/javascript" src="{% static "js/backbone.js" %}"></script>
 <script type="text/javascript" src="{% static "js/backbone-tastypie.js" %}"></script>
-<script type="text/javascript" src="{% static "js/jstorage.js" %}"></script>
 <script type="text/javascript" src="{% static "js/jquery.ba-bbq.js" %}"></script>
 {% endcompress %}
 {% compress js %}
