@@ -372,11 +372,12 @@ jQuery ->
     <div id="info-faq" class="hide">
       <p>Tiedot on saatu automaattisesti Ylen vaalikoneesta. Jos olet rekisteröinyt oman FB-sivusi vaalikoneeseen, homma voi vielä mennä pieleen seuraavilla tavoilla:</p>
       <ul>
-        <li>Olet linkittänyt henkilökohtaisen FB-profiilisi. Koska palvelu hakee <em>kaikki</em> päivitykset, myös vuosia vanhat, jätimme henkilökohtaiset profiilit pois ehdokkaiden yksityisyydensuojan takia. Voimme eri pyynnöstä lisätä palveluun myös henkilökohtaisen profiilisi.</li>
+        <li>Olet linkittänyt henkilökohtaisen FB-profiilisi. Koska palvelu hakee <em>kaikki</em> päivitykset, myös vuosia vanhat, jätimme henkilökohtaiset profiilit pois ehdokkaiden yksityisyydensuojan takia. Facebook rajoittaa myös muilla tavoin henkilökohtaisten profiilien ohjelmallista käyttöä.</li>
         <li>Olet linkittänyt ryhmäsivun. Palveluumme on otettu mukaan ainoastaan julkiset FB-sivut. FB-ryhmät ovat luonteeltaan sen verran erilaisia, ettei vertailu helposti onnistu.</li>
       </ul>
       <h5>Mitä teen, jos päivitykseni puuttuvat tai haluan poistaa tietoni?</h5>
-      <p>Klikkaa tästä.
+      <p>Jos Facebook-päivityksesi puuttuvat, varmista ensin että sinulla on julkinen sivu. Voit myös <a href="https://www.facebook.com/pages/create.php">luoda sellaisen nyt.</a></p>
+      <p>Tämän jälkeen voit klikata viereisestä napista.
         <a href="{% url political.views.candidate_change_request %}">
           <button style="margin-top: -4px; margin-left: 8px;" class="btn-mini btn">Pyydä muutosta</button>
         </a>
