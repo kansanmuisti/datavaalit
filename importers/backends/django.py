@@ -30,7 +30,7 @@ MATCH_TABLE = {
     'Teijo Tapani Harinen (Espoo)' : {'first_name': 'Tessu Tapani'},
     'Tito Eugénio Moreira Sanches de Magalhaes (Rovaniemi)':  {'last_name': 'Moreira Sanches de Magalhães'},
     'Veikko Tapio Valkonen (Kerava)':  {'first_name': 'Veikko T'},
-    'Maija-Liisa Välimäki (Turku)':  {'first_name': 'Maija (Maija-Liisa)'},
+    'Maija-Liisa Välimäki (Turku)':  {'first_name': 'Maisa (Maija-Liisa)'},
     'Marjokaisa Piironen (Kirkkonummi)':  {'first_name': 'Kaisa'},
     'Markku Olavi Tabell (Kirkkonummi)':  {'first_name': 'Max'},
     'Simon Francisco Riestra Aedo (Tampere)':  {'first_name': 'Simón'},
@@ -382,15 +382,16 @@ class DjangoBackend(Backend):
 
         # If it's in the match table, it needs to be in the database, too.
         # Otherwise it's a bug.
-        if MATCH_TABLE.has_key(person_str):
-            fix_item = MATCH_TABLE[person_str]
+        if MATCH_TABLE.has_key(person_str.encode('utf8')):
+            fix_item = MATCH_TABLE[person_str.encode('utf8')]
             person_args = {'first_name__iexact': first_names[0],
                            'last_name__iexact': info['last_name'],
                            'municipality': info['municipality']}
             for k in fix_item.keys():
-                person_args['%s__iexact' % k] = fix_item[k]
+                person_args['%s__iexact' % k] = fix_item[k].decode('utf8')
 
             self.logger.debug("Trying %s with fixed name" % person_str)
+            self.logger.debug("%s" % person_args)
             return Person.objects.get(**person_args)
 
         for first_name in first_names:
@@ -403,7 +404,6 @@ class DjangoBackend(Backend):
                 return person
             except Person.DoesNotExist:
                 self.logger.debug("Could not find person %s with first name: %s" % (person_str, person_args['first_name__iexact']))
-
 
         return None
 
