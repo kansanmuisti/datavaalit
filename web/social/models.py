@@ -26,6 +26,12 @@ class Feed(models.Model):
         self.picture = feed_info.get('picture', {}).get('data', {}).get('url', None)
         self.interest = feed_info.get('likes', None)
         return feed_info
+    def __unicode__(self):
+        if self.account_name:
+            acc_str = " (%s)" % self.account_name
+        else:
+            acc_str = ""
+        return "%s / id %s%s" % (self.type, self.origin_id, acc_str)
 
 class BrokenFeed(models.Model):
     type = models.CharField(max_length=2, choices=Feed.TYPE_CHOICES)

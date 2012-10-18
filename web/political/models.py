@@ -60,6 +60,8 @@ class Candidate(models.Model):
     election = models.ForeignKey(Election, db_index=True)
     municipality = models.ForeignKey(Municipality, null=True, db_index=True)
 
+    objects = CandidateManager()
+
     def __unicode__(self):
         el = self.election
         p = self.person
@@ -92,11 +94,19 @@ class MunicipalityTrustee(models.Model):
 class CandidateFeed(Feed):
     candidate = models.ForeignKey(Candidate)
 
+    def __unicode__(self):
+        s = super(CandidateFeed, self).__unicode__()
+        return "%s (for %s)" % (s, unicode(self.candidate))
+
+
 class ExpenseType(models.Model):
     '''Models different types of expenses a campaign can have.
     '''
     name = models.CharField(max_length=25, unique=True)
     description = models.CharField(max_length=100)
+
+    def __unicode__(self):
+        return self.name
 
 class Expense(models.Model):
     '''Models different election campaign expenses.
@@ -108,6 +118,10 @@ class Expense(models.Model):
 
     class Meta:
         unique_together = (('candidate', 'type'),)
+
+    def __unicode__(self):
+        return "%s / %s: %s (added %s)" % (self.candidate, self.type.name,
+                        self.sum, self.time_added)
 
 class ExpenseHistory(models.Model):
     '''Stores the date the candidate first left their
