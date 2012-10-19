@@ -28,7 +28,7 @@ BACKLOG_URL = 'http://tmp.ypcs.fi/data/kunnallisvaalit2012/?C=M%3BO%3DD'
 
 @register_importer
 class VaalirahoitusImporter(Importer):
-    # FIXME: what is "name" actually referring to?
+    
     name = 'vrv'
     description = 'import candidate election budget (expenses + funding) from vaalirahoitusvalvonta.fi'
     country = 'fi'
