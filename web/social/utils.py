@@ -122,10 +122,15 @@ class FeedUpdater(object):
         # Finally feeds that haven't been updated in two hours,
         # but that are active (i.e. have posts dating from the
         # last week).
-        update_dt = datetime.datetime.now() - datetime.timedelta(hours=2)
-        post_dt = datetime.datetime.now() - datetime.timedelta(days=3)
-        active = Q(update__created_time__gt=post_dt)
-        fl = list(base_query.filter(Q(last_update__lt=update_dt) & active).distinct())
+        # In the case of Twitter, we're using live streaming,
+        # so skip this.
+        if feed_type != 'TW':
+            update_dt = datetime.datetime.now() - datetime.timedelta(hours=2)
+            post_dt = datetime.datetime.now() - datetime.timedelta(days=3)
+            active = Q(update__created_time__gt=post_dt)
+            fl = list(base_query.filter(Q(last_update__lt=update_dt) & active).distinct())
+        else:
+            fl = []
         counts.append(len(fl))
         _append_without_dupes(feed_list, fl)
 
