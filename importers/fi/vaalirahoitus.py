@@ -4,6 +4,7 @@ from collections import OrderedDict
 import csv
 #from web.utils.ucsv import unicode_csv_reader
 import datetime
+import re
 from HTMLParser import HTMLParser
 
 from importers import Importer, register_importer
@@ -28,7 +29,7 @@ BACKLOG_URL = 'http://tmp.ypcs.fi/data/kunnallisvaalit2012/?C=M%3BO%3DD'
 
 @register_importer
 class VaalirahoitusImporter(Importer):
-    
+
     name = 'vrv'
     description = 'import candidate election budget (expenses + funding) from vaalirahoitusvalvonta.fi'
     country = 'fi'
@@ -54,7 +55,7 @@ class VaalirahoitusImporter(Importer):
 
             # Strip whitespaces form row
             row = [x.strip() for x in row]
-            # Strip quotochars form row, TODO: this could be done more 
+            # Strip quotochars form row, TODO: this could be done more
             # gracefully as part of the read-in
             row = [x.strip("'") for x in row]
             # Replaces commas with dots in decimal delimiters
@@ -73,7 +74,7 @@ class VaalirahoitusImporter(Importer):
 
             expenses = []
             for expense_type in EXPENSE_TYPES:
-                # Only record the expense type if there is a value associated 
+                # Only record the expense type if there is a value associated
                 # to it
                 value = row[expense_type['index']]
                 if not value:
@@ -95,15 +96,15 @@ class VaalirahoitusImporter(Importer):
             candidates.append(cand)
 
         election = {'type': 'muni', 'year': 2012}
-        # EXPENSE_TYPES is also returned; backend may have to populate e.g. a 
+        # EXPENSE_TYPES is also returned; backend may have to populate e.g. a
         # DB table with the information
         self.backend.submit_prebudgets(election, expense_types, candidates)
 
     def import_prebudgets(self, backlog=False):
         # Construct a list of tuples, wher in each tuple the first item is the
-        # actial url and the second one is a timestamp describing when the 
+        # actial url and the second one is a timestamp describing when the
         # information was recorded
-           
+
         if backlog:
             from lxml import html
             import urlparse
@@ -119,10 +120,10 @@ class VaalirahoitusImporter(Importer):
                     # TODO: regex would be more elegant
                     timestamp = csv_file.split('_', 2)[2].replace('.csv', '')
                     timestamp = timestamp.replace('_', ' ')
-                    # FIXME: this is just waiting to get broken. Insert ':' in 
+                    # FIXME: this is just waiting to get broken. Insert ':' in
                     # between HH and MM (apparently demanded by Django)
                     timestamp = timestamp[:-2] + ':' + timestamp[-2:]
-    
+
                     csv_urls.append((url, timestamp))
         else:
             # TODO: hardcoded urls should be defined consistently as globals etc.
@@ -130,21 +131,35 @@ class VaalirahoitusImporter(Importer):
             csv_urls = [
                         ("http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia/raportit/Tietoaineistot/E_EI_KV2012.csv",
                         datetime.datetime.now().strftime('%Y-%m-%d %H:%M'))]
-            
+
         for URL in csv_urls:
             self.logger.info("Fetching URL %s" % URL[0])
-            
+
             s = self.http.open_url(URL[0], self.name)
-            
+
             lines = [l for l in s.split('\n')]
-            
-            # In case there are HTML specific characters, get rid of them
-            lines = [line.replace('&agrave;', 'à').replace('&uuml;', 'ü').replace('&eacute;', 'é').replace('&aacute;', 'á') for line in lines]
-            
-            
+
+            REPLACE_TABLE = {
+                '&agrave;': 'à',
+                '&egrave;': 'è',
+                '&uuml;': 'ü',
+                '&eacute;': 'é',
+                '&aacute;': 'á',
+            }
+            changed = []
+            html_ent = re.compile(r"&[a-z]+;")
+            for line in lines:
+                if html_ent.search(line):
+                    for r in REPLACE_TABLE.keys():
+                        line = line.replace(r, REPLACE_TABLE[r])
+            	if html_ent.search(line):
+            	    self.logger.error("Invalid character in line: '%s'" % line)
+            	    raise Exception("Invalid characters in input")
+                changed.append(line)
+            lines = changed
             # TODO: quotechar could be used here. However, quotechars can break
             # the read-in
             reader = csv.reader(lines, delimiter=';')
-            
+
             self._import_prebudgets_from_csv(reader, URL[1])
-        
+
