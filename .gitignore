@@ -10,3 +10,4 @@ web/media/images
 web/media/tmp
 web/static/cache
 web/.cache
+.Rproj.user

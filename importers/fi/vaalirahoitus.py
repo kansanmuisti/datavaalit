@@ -139,7 +139,8 @@ class VaalirahoitusImporter(Importer):
             lines = [l for l in s.split('\n')]
             
             # In case there are HTML specific characters, get rid of them
-            lines = [line.replace('&agrave;', 'á').replace('&uuml;', 'ü').replace('&eacute;', 'é') for line in lines]
+            lines = [line.replace('&agrave;', 'à').replace('&uuml;', 'ü').replace('&eacute;', 'é').replace('&aacute;', 'á') for line in lines]
+            
             
             # TODO: quotechar could be used here. However, quotechars can break
             # the read-in
