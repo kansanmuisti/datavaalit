@@ -136,6 +136,37 @@ class FeedUpdater(object):
         return feed_list
 
     @transaction.commit_on_success
+    def process_tweet(self, tweet):
+        self.logger.debug("incoming tweet with id %s" % tweet['id'])
+        try:
+            tw_obj = Update.objects.get(feed__type="TW", origin_id=tweet['id'])
+            return
+        except Update.DoesNotExist:
+            pass
+        tw_user = tweet['user']
+        try:
+            feed = Feed.objects.get(type="TW", origin_id=tw_user['id'])
+        except Feed.DoesNotExist:
+            self.logger.debug("feed %s (%s) not found" % (tw_user['id'], tw_user['screen_name']))
+            return
+        self.logger.debug("tweet for feed %s" % unicode(feed))
+        feed.last_update = datetime.datetime.now()
+        feed.interest = tw_user['followers_count']
+        feed.picture = tw_user['profile_image_url']
+        feed.account_name = tw_user['screen_name']
+        feed.save()
+        tw_obj = Update(feed=feed, origin_id=tweet['id'])
+        text = tweet['text']
+        tw_obj.text = text.replace('&gt;', '>').replace('&lt;', '<').replace('&#39;', "'")
+        date = calendar.timegm(email.utils.parsedate(tweet['created_at']))
+        tw_obj.created_time = datetime.datetime.fromtimestamp(date)
+        try:
+            tw_obj.save()
+        except Exception as e:
+            self.logger.error(str(e))
+            raise
+
+    @transaction.commit_on_success
     def process_twitter_feed(self, feed):
         self.logger.info("Processing Twitter feed %s" % feed.account_name)
         user_id = feed.origin_id
@@ -235,20 +266,30 @@ class FeedUpdater(object):
 
     @transaction.commit_on_success
     def process_facebook_feed(self, feed, full_update=False):
-        self.logger.info('Processing feed %s: %s' % (feed.account_name, feed.origin_id))
+        self.logger.info('Processing feed %s' % unicode(feed))
 
         # First update the feed itself
         url = '%s&fields=picture,likes,about' % feed.origin_id
         feed_info = self._fb_get(url)
         feed.picture = feed_info.get('picture', {}).get('data', {}).get('url', None)
         feed.interest = feed_info.get('likes', None)
+        # Limit downloading of personal feeds to last two months.
+        if 'category' not in feed_info:
+            feed.is_personal = True
+            since = datetime.datetime.now() - datetime.timedelta(weeks=2*4)
+            since = int(time.mktime(since.timetuple()))
+            filter_args = "&since=%d" % since
+            self.logger.debug('%s is a personal feed' % unicode(feed))
+        else:
+            feed.is_personal = False
+            filter_args = ""
 
         if full_update:
             count = 100
         else:
             count = 20
         new_count = 0
-        url = '%s/posts&limit=%d' % (feed.origin_id, count)
+        url = '%s/posts&limit=%d%s' % (feed.origin_id, count, filter_args)
         while True:
             self.logger.info('Fetching %s' % url)
             g = self._fb_get(url)
@@ -330,7 +371,7 @@ class FeedUpdater(object):
                 # If at least some of the updates were in our DB already,
                 # the feed is up-to-date.
                 break
-            url = "%s/posts&limit=%d&until=%d" % (feed.origin_id, count, until)
+            url = "%s/posts&limit=%d&until=%d%s" % (feed.origin_id, count, until, filter_args)
         self.logger.info("%s: %d new updates" % (feed.account_name, new_count))
         feed.update_error_count = 0
         feed.last_update = datetime.datetime.now()
