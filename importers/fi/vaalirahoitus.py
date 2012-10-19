@@ -4,6 +4,7 @@ from collections import OrderedDict
 import csv
 #from web.utils.ucsv import unicode_csv_reader
 import datetime
+import re
 from HTMLParser import HTMLParser
 
 from importers import Importer, register_importer
@@ -137,13 +138,27 @@ class VaalirahoitusImporter(Importer):
             s = self.http.open_url(URL[0], self.name)
             
             lines = [l for l in s.split('\n')]
-            
-            # In case there are HTML specific characters, get rid of them
-            lines = [line.replace('&agrave;', 'á').replace('&uuml;', 'ü').replace('&eacute;', 'é') for line in lines]
-            
+            REPLACE_TABLE = {
+                '&agrave;': 'à',
+                '&egrave;': 'è',
+                '&uuml;': 'ü',
+                '&eacute;': 'é',
+                '&aacute;': 'á',
+            }
+            changed = []
+            html_ent = re.compile(r"&[a-z]+;")
+            for line in lines:
+                if html_ent.search(line):
+                    for r in REPLACE_TABLE.keys():
+                        line = line.replace(r, REPLACE_TABLE[r])
+            	if html_ent.search(line):
+            	    self.logger.error("Invalid character in line: '%s'" % line)
+            	    raise Exception("Invalid characters in input")
+                changed.append(line)
+            lines = changed
             # TODO: quotechar could be used here. However, quotechars can break
             # the read-in
             reader = csv.reader(lines, delimiter=';')
             
             self._import_prebudgets_from_csv(reader, URL[1])
-        
+
