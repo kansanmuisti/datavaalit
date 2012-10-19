@@ -54,8 +54,9 @@ parser.add_option("--replace", help="replace existing data in DB", dest="replace
                   action="store_true")
 parser.add_option("-v", "--verbose", help="verbose output", dest="verbose",
                   action="store_true")
-parser.add_option("--disable-cache", help="Disable file cache", dest="cache",
-                  action="store_false", default=True)
+parser.add_option("--disable-cache", help="Disable file cache", dest="disable_cache",
+                  action="store_true")
+
 # TODO: Parses option dependencies could be handled better. Backlog option is
 # relevant only for importers that import updating data. Backlog can be used
 # if there is a set of files (time series) that needs to be imported in order
@@ -90,13 +91,10 @@ if options.imports:
 
     http = HttpFetcher()
 
-    if options.cache:
+    if not options.disable_cache:
         cache_dir = ".cache"
         http.set_cache_dir(cache_dir)
         requests_cache.configure("importers")
-    else:
-        
-        http.set_cache_dir("")
 
     if options.django:
         from importers.backends.django import DjangoBackend
@@ -104,22 +102,15 @@ if options.imports:
         # We need to start logging after Django initializes
         # because Django can be configured to reset logging.
         logger = init_logging(debug=options.verbose)
-        
-        if options.cache:
-            logger.debug("Setting up cache in %s" % cache_dir)
-        else:
-            logger.debug("Cache disabled")
-        
         backend = DjangoBackend(logger, replace=options.replace)
     else:
         logger = init_logging(debug=options.verbose)
-        
-        if options.cache:
-            logger.debug("Setting up cache in %s" % cache_dir)
-        else:
-            logger.debug("Cache disabled")
-        
         backend = Backend(logger, replace=options.replace)
+
+    if not options.disable_cache:
+        logger.debug("Setting up HTTP cache in %s" % cache_dir)
+    else:
+        logger.debug("HTTP caching disabled")
 
     for imp_class in importer_list:
         if options.select_importer:

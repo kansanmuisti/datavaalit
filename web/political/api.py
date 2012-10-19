@@ -49,6 +49,7 @@ class CandidateResource(ModelResource):
             "municipality": ('exact', 'in'),
             "election": ('exact', 'in'),
             "party": ('exact', 'in'),
+            "number": ALL,
         }
 
 

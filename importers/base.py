@@ -1,12 +1,15 @@
 import os
 import sys
 import pprint
+import logging
 
 class DataImportError(Exception):
     pass
 
 class Backend(object):
-    def __init__(self, logger, replace=False):
+    def __init__(self, logger=None, replace=False):
+        if not logger:
+            logger = logging.getLogger(__name__)
         self.logger = logger
         self.replace = replace
 
@@ -28,7 +31,7 @@ class Backend(object):
         for p in parties:
             pprint.pprint(p)
             
-    def submit_prebudgets(self, expenses, expense_types):
+    def submit_prebudgets(self, election, expense_types, candidates):
         '''Expenses argument is an OrderedDict with dicts with candidate name 
         as keys and detailed expenses as nested dict pairs.
         
@@ -37,28 +40,14 @@ class Backend(object):
                          ('candidate_name2', {expense1 : sum1, expense2 : sum2})])
          
         '''
+        print election
+        pprint.pprint(expense_types)
         print "Candidate expenses:"
-        n_expenses = len(expenses)
-        for candidate_expenses in expenses:
-            any_expenses = False
-            print("%s:" % (candidate_expenses.pop('first_names') + ' ' + candidate_expenses.pop('last_name')))
-            print("  Municipality: %s" % candidate_expenses.pop('municipality'))
-            print("  Submitted: %s" % candidate_expenses.pop('timestamp'))
-            for key, value in candidate_expenses.iteritems():
+        for cand in candidates:
+            pprint.pprint(cand)
 
-                if key and value > 0.0: 
-                    print("  %s: %s euros" % (key, value))
-                    if key == 'total':
-                        print(' ')
-                    any_expenses = True
-                if not any_expenses:
-                    print("  No reported expenses")
-                    break
-                
-            print(' ')
-            
-        print("Total number of expenses reported: %s" % n_expenses)
-        
+        print("Total number of candidates with expenses reported: %d" % len(candidates))
+
 class Importer(object):
     def __init__(self, data_path, http, logger, backend, replace=False):
         self.data_path = data_path
