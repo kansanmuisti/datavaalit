@@ -1,6 +1,7 @@
 import csv
 
 from importers import Importer, register_importer
+from operator import itemgetter
 from importers.fi import canonize_party
 
 @register_importer
@@ -43,10 +44,39 @@ class VaalitImporter(Importer):
                 party_list.append(party)
         self.backend.submit_parties(party_list)
 
+    DUPLICATE_MAP = {
+        '33/105': 1,    #Esa Heikkinen
+        '50/423': 1,
+        '10/102': 1,
+        '329/837': 1,
+        '65/143': 1,
+        '262/405': 1,   #Markku Timonen
+        '27/740': 1,    #Heli Laamanen
+        '32/363': 1,    #Jari Tikkanen
+        '159/167': 1,   #Tuija Kuivalainen
+        '29/422': 1,    #Seppo Kiiskinen
+        '10/226': 1,    #Satu Koskinen
+        '232/205': 1,   #Hannu Kemppainen
+        '153/205': 1,   #Kari Heikkinen
+        '451/564': 1,   #Lauri Inkala
+        '15/305': 1,    #Taisto M??tt?
+        '25/777': 1,    #Niina Kinnunen
+        '32/263': 1,    #Jari Tikkanen
+    }
+
+    def _apply_duplicate_index(self, cand):
+        s = "%d/%d" % (cand['number'], cand['municipality']['code'])
+        s = s.encode('utf8')
+        num = self.DUPLICATE_MAP.get(s, 0)
+        if num:
+            cand['index'] = num
+
     def import_candidates(self):
         election = {'type': 'muni', 'year': 2012}
         URL_BASE="http://192.49.229.35/K2012/s/ehd_listat/%s_%02d.csv"
         for i in range(1, 15 + 1):
+            # names is only used for finding out duplicate names.
+            names = []
             # Skip Ahvenanmaa
             if i == 5:
                 continue
@@ -60,7 +90,7 @@ class VaalitImporter(Importer):
                 row = [x.strip().decode('utf8') for x in row]
                 if not len(row):
                     continue
-                muni_code = row[2]
+                muni_code = int(row[2])
                 cand = {'municipality': {'code': muni_code}}
                 cand['party'] = row[10]
                 cand['first_name'] = row[15]
@@ -69,5 +99,14 @@ class VaalitImporter(Importer):
                 cand['gender'] = {1: 'M', 2:'F'}[gender]
                 cand['profession'] = row[19]
                 cand['number'] = int(row[12])
+                names.append(("%s %s" % (row[15], row[16]), cand))
+                self._apply_duplicate_index(cand)
                 candidate_list.append(cand)
+
+            #prev_n = None
+            #for idx, n in enumerate(sorted(names, key=itemgetter(0))):
+            #    if prev_n and n[0] == prev_n[0]:
+            #        print n[1]
+            #        print prev_n[1]
+            #    prev_n = n
             self.backend.submit_candidates(election, candidate_list)
