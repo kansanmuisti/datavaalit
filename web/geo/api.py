@@ -10,6 +10,7 @@ class MunicipalityResource(ModelResource):
         muni = bundle.obj
         data = {'type': 'Feature'}
         data['properties'] = bundle.data
+        data['id'] = bundle.obj.pk
         borders = muni.municipalityboundary.borders
         data['geometry'] = json.loads(borders.geojson)
         bundle.data = data
