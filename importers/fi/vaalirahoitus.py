@@ -98,6 +98,7 @@ class VaalirahoitusImporter(Importer):
         election = {'type': 'muni', 'year': 2012}
         # EXPENSE_TYPES is also returned; backend may have to populate e.g. a
         # DB table with the information
+        
         self.backend.submit_prebudgets(election, expense_types, candidates)
 
     def import_prebudgets(self, backlog=False):
@@ -153,9 +154,9 @@ class VaalirahoitusImporter(Importer):
                 if html_ent.search(line):
                     for r in REPLACE_TABLE.keys():
                         line = line.replace(r, REPLACE_TABLE[r])
-            	if html_ent.search(line):
-            	    self.logger.error("Invalid character in line: '%s'" % line)
-            	    raise Exception("Invalid characters in input")
+                if html_ent.search(line):
+                    self.logger.error("Invalid character in line: '%s'" % line)
+                    raise Exception("Invalid characters in input")
                 changed.append(line)
             lines = changed
             # TODO: quotechar could be used here. However, quotechars can break
