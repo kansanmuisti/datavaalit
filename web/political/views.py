@@ -35,7 +35,7 @@ def candidate_change_request(request):
 
 def _calc_prebudget_stats():
     # Find the list of candidates that have submitted the campaign prebudgets
-    submitted_list = Candidate.objects.filter(expense__isnull=False).distinct()
+    submitted_list = Prebudget.objects.all().distinct()
     muni_list = Municipality.objects.all().annotate(num_candidates=Count('candidate')).filter(num_candidates__gt=0).order_by('name')
     muni_dict = {}
 
@@ -45,11 +45,9 @@ def _calc_prebudget_stats():
 
     # Calculate how many candidates have submitted the budgets per muni.
     # Also figure out when the candidate first submitted the prebudget.
-    for cand in submitted_list:
-        muni = muni_dict[cand.municipality_id]
+    for preb in submitted_list:
+        muni = muni_dict[preb.candidate.municipality_id]
         muni.num_submitted += 1
-        # Get the date of the earliest submission
-        cand.time_submitted = Expense.objects.filter(candidate=cand).order_by('time_added')[0]
 
     args = {}
 

@@ -112,6 +112,12 @@ class CandidateFeed(Feed):
         s = super(CandidateFeed, self).__unicode__()
         return "%s (for %s)" % (s, unicode(self.candidate))
 
+class Prebudget(models.Model):
+    '''Reference to overall campaing budget.
+    '''
+    # TODO: could add different timestamps here
+    candidate = models.ForeignKey(Candidate, db_index=True)
+    time_added = models.DateTimeField()
 
 class ExpenseType(models.Model):
     '''Models different types of expenses a campaign can have.
@@ -125,16 +131,16 @@ class ExpenseType(models.Model):
 class Expense(models.Model):
     '''Models different election campaign expenses.
     '''
-    candidate = models.ForeignKey(Candidate, db_index=True)
+    prebudget = models.ForeignKey(Prebudget, db_index=True)
     type = models.ForeignKey(ExpenseType)
     sum = models.DecimalField(max_digits=15, decimal_places=2)
     time_added = models.DateTimeField()
 
     class Meta:
-        unique_together = (('candidate', 'type'),)
+        unique_together = (('prebudget', 'type'),)
 
     def __unicode__(self):
-        return "%s / %s: %s (added %s)" % (self.candidate, self.type.name,
+        return "%s / %s: %s (added %s)" % (self.prebudget.candidate, self.type.name,
                         self.sum, self.time_added)
 
 class ExpenseHistory(models.Model):

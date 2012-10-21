@@ -442,6 +442,8 @@ class DjangoBackend(Backend):
     def submit_prebudgets(self, election, expense_types, candidates):
         election = Election.objects.get(type=election['type'], year=election['year'])
 
+        self.logger.info("Backend received %s candidates" % len(candidates))
+
         # First, populate ExpenseType table if not populated already
         stored_types = list(ExpenseType.objects.all())
         count = 0
@@ -477,13 +479,15 @@ class DjangoBackend(Backend):
         # in Person are never created, queries will fail if person is not found.
 
         candidate_counter = 0
+        candidate_added_counter = 0
         candidate_updates_counter = 0
+        candidate_no_expenses_counter = 0
         expense_counter = 0
         missing_counter = 0
 
         for cand in candidates:
-            # Keep track if the candidate expenses were updated
-            updated = False
+            # Keep track if the candidate expenses were added
+            added = False
 
             db.reset_queries()
 
@@ -514,9 +518,27 @@ class DjangoBackend(Backend):
                 self.logger.error("Could not find candidate entry for %s" % person_str)
                 missing_counter += 1
                 continue
+            
+            db_expenses = []
+            
+            # Get the overall prebudget
+            try:
+                prebudget = Prebudget.objects.get(candidate=candidate)
 
-            # What expenses (if any) has person got in the Expense table
-            db_expenses = list(Expense.objects.filter(candidate=candidate))
+                # If there is an existing prebudget, use that
+                # What expenses (if any) has person got in the Expense table
+                db_expenses = list(Expense.objects.filter(prebudget=prebudget))
+            # There is no previous prebudget, hence there can be no expenses
+            except Prebudget.DoesNotExist:
+                prebudget = Prebudget(candidate=candidate,
+                                      time_added=cand['timestamp'])
+                prebudget.save()
+                msg = "Created a new prebudget for %s" % person_str
+                self.logger.debug(msg)
+
+            # Is the expense list empty?
+            if not cand['expenses']:
+                candidate_no_expenses_counter += 1
 
             for exp in cand['expenses']:
                 for exp_type in expense_types:
@@ -532,10 +554,13 @@ class DjangoBackend(Backend):
                         break
                     exp_obj.sum = exp['value']
                     exp_obj.save()
+                    msg = "Updated expense for %s: %s = %s" % (person_str, exp['type'], exp['value'])
+                    
+                    self.logger.debug(msg)
                     break
                 else:
                     # Create a new expense item
-                    new_expense = Expense(candidate=candidate,
+                    new_expense = Expense(prebudget=prebudget,
                                           type=exp_type,
                                           sum=exp['value'],
                                           time_added=cand['timestamp'])
@@ -543,14 +568,16 @@ class DjangoBackend(Backend):
                     msg = "New expense for %s: %s = %s" % (person_str, exp_type.name, new_expense.sum)
                     self.logger.debug(msg)
                     expense_counter += 1
-                    updated = True
+                    added = True
 
-            if updated:
-                candidate_updates_counter += 1
+            if added:
+                candidate_added_counter += 1
             candidate_counter += 1
 
         self.logger.info("Processed %d candidates" % candidate_counter)
         self.logger.info("Added %d expenses for %d candidates" % (expense_counter,
-                                                                          candidate_updates_counter))
+                                                                          candidate_added_counter))
+        if candidate_no_expenses_counter > 0:
+            self.logger.info("%s candidates have filed report but no expenses" % candidate_no_expenses_counter)
         if missing_counter > 0:
             self.logger.warning("Could not match names for %d candidates" % missing_counter)
