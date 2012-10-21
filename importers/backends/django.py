@@ -530,7 +530,8 @@ class DjangoBackend(Backend):
                 db_expenses = list(Expense.objects.filter(prebudget=prebudget))
             # There is no previous prebudget, hence there can be no expenses
             except Prebudget.DoesNotExist:
-                prebudget = Prebudget(candidate=candidate)
+                prebudget = Prebudget(candidate=candidate,
+                                      time_added=cand['timestamp'])
                 prebudget.save()
                 msg = "Created a new prebudget for %s" % person_str
                 self.logger.debug(msg)

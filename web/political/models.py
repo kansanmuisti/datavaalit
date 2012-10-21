@@ -117,6 +117,7 @@ class Prebudget(models.Model):
     '''
     # TODO: could add different timestamps here
     candidate = models.ForeignKey(Candidate, db_index=True)
+    time_added = models.DateTimeField()
 
 class ExpenseType(models.Model):
     '''Models different types of expenses a campaign can have.
