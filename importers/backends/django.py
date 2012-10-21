@@ -292,6 +292,8 @@ class DjangoBackend(Backend):
         if not cf:
             try:
                 cf = CandidateFeed.objects.get(type='FB', origin_id=origin_id)
+                if cf.candidate != candidate:
+                    self.logger.error("FB feed (id %s) was for %s, not %s" % (origin_id, cf.candidate, candidate))
                 assert cf.candidate == candidate
             except CandidateFeed.DoesNotExist:
                 assert CandidateFeed.objects.filter(candidate=candidate, type='FB').count() == 0
