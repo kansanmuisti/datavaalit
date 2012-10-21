@@ -39,6 +39,12 @@ class Person(models.Model):
     gender = models.CharField(max_length=1, null=True, choices=GENDERS)
     party = models.ForeignKey(Party, null=True)
     municipality = models.ForeignKey(Municipality, db_index=True)
+    # If there are two people with the same name in a municipality,
+    # we use the 'index' field to differentiate.
+    index = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = (('first_name', 'last_name', 'municipality', 'index'),)
 
     def __unicode__(self):
         return u"%s %s" % (self.first_name, self.last_name)
@@ -61,6 +67,14 @@ class Candidate(models.Model):
     municipality = models.ForeignKey(Municipality, null=True, db_index=True)
 
     objects = CandidateManager()
+
+    class Meta:
+        unique_together = (
+                # One person can have only one candidacy in a municipality
+                ('person', 'municipality', 'election'),
+                # There can be only one candidacy per number in a municipality
+                ('number', 'municipality', 'election')
+        )
 
     def __unicode__(self):
         el = self.election

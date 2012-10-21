@@ -136,21 +136,94 @@ class DjangoBackend(Backend):
                 count += 1
         self.logger.info("%s: %d municipality trustee(s) saved" % count)
 
+    def _find_person(self, info):
+        if 'first_name' in info:
+            first_name_str = info['first_name']
+        else:
+            first_name_str = info['first_names']
+        person_str = "%s %s (%s)" % (first_name_str, info['last_name'],
+                                     info['municipality'].name)
+
+        # Since expense reports can have several firstnames, try
+        # following names as well if the 1st doesn't match.
+        # TODO: heuristics here could be done smarter
+        first_names = info['first_names'].split()
+
+        # Break two-part names ("John-Peter") into to individual names 
+        # in case one of them is the primary first name
+        for first_name in first_names:
+            if '-' in first_name:
+                first_names += first_name.split('-')
+
+        # If it's in the match table, it needs to be in the database, too.
+        # Otherwise it's a bug.
+        if MATCH_TABLE.has_key(person_str.encode('utf8')):
+            fix_item = MATCH_TABLE[person_str.encode('utf8')]
+            person_args = {'first_name__iexact': first_names[0],
+                           'last_name__iexact': info['last_name'],
+                           'municipality': info['municipality']}
+            for k in fix_item.keys():
+                person_args['%s__iexact' % k] = fix_item[k].decode('utf8')
+
+            self.logger.debug("Trying %s with fixed name" % person_str)
+            self.logger.debug("%s" % person_args)
+            return Person.objects.get(**person_args)
+
+        # If we were given a first name, we should find an exact match.
+        if 'first_name' in info:
+            args = {'first_name__iexact': first_name,
+                    'last_name__iexact': info['last_name'],
+                    'municipality': info['municipality']}
+            # For duplicate names, the importer gives us an index.
+            if 'index' in info:
+                args['index'] = info['index']
+            try:
+                person = Person.objects.get(args)
+            except Person.DoesNotExist:
+                return None
+
+        for first_name in first_names:
+            person_args = {'first_name__iexact': first_name, 
+                           'last_name__iexact': info['last_name'],
+                           'municipality': info['municipality']}
+            try:
+                person = Person.objects.get(**person_args)
+                self.logger.debug("Found person %s with first name: %s." % (person_str, person_args['first_name__iexact']))
+                return person
+            except Person.DoesNotExist:
+                self.logger.debug("Could not find person %s with first name: %s" % (person_str, person_args['first_name__iexact']))
+            except Person.MultipleObjectsReturned:
+                self.logger.error("Multiple for %s (fix index)" % person_str)
+
+        return None
+
     def _create_or_get_person(self, info):
         args = {'first_name__iexact': info['first_name'], 'last_name__iexact': info['last_name'],
                 'municipality': info['municipality']}
+        if 'index' in info:
+            args['index'] = info['index']
+        else:
+            args['index'] = 0
         try:
             person = Person.objects.get(**args)
             update_person = self.replace
         except Person.DoesNotExist:
             person = Person(first_name=info['first_name'], last_name=info['last_name'],
                             municipality=info['municipality'])
+            if 'index' in info:
+                person.index = info['index']
             update_person = True
+            self.logger.info('Created person %s %s from %s' % (person.first_name, person.last_name,
+                        person.municipality))
         if update_person:
             if 'gender' in info:
                 person.gender = info['gender']
             if 'party' in info:
                 person.party = self.party_dict.get(info['party'], None)
+            if 'index' in info:
+                person.index = info['index']
+            else:
+                person.index = 0
             person.save()
         return person
 
@@ -364,49 +437,6 @@ class DjangoBackend(Backend):
 
         self.logger.info("%d candidates updated" % count)
 
-    def _find_person(self, info):
-        person_str = "%s %s (%s)" % (info['first_names'],
-                                     info['last_name'],
-                                     info['municipality'].name)
-
-        # Since expense reports can have several firstnames, try
-        # following names as well if the 1st doesn't match.
-        # TODO: heuristics here could be done smarter
-        first_names = info['first_names'].split()
-
-        # Break two-part names ("John-Peter") into to individual names 
-        # in case one of them is the primary first name
-        for first_name in first_names:
-            if '-' in first_name:
-                first_names += first_name.split('-')
-
-        # If it's in the match table, it needs to be in the database, too.
-        # Otherwise it's a bug.
-        if MATCH_TABLE.has_key(person_str.encode('utf8')):
-            fix_item = MATCH_TABLE[person_str.encode('utf8')]
-            person_args = {'first_name__iexact': first_names[0],
-                           'last_name__iexact': info['last_name'],
-                           'municipality': info['municipality']}
-            for k in fix_item.keys():
-                person_args['%s__iexact' % k] = fix_item[k].decode('utf8')
-
-            self.logger.debug("Trying %s with fixed name" % person_str)
-            self.logger.debug("%s" % person_args)
-            return Person.objects.get(**person_args)
-
-        for first_name in first_names:
-            person_args = {'first_name__iexact': first_name, 
-                           'last_name__iexact': info['last_name'],
-                           'municipality': info['municipality']}
-            try:
-                person = Person.objects.get(**person_args)
-                self.logger.debug("Found person %s with first name: %s." % (person_str, person_args['first_name__iexact']))
-                return person
-            except Person.DoesNotExist:
-                self.logger.debug("Could not find person %s with first name: %s" % (person_str, person_args['first_name__iexact']))
-
-        return None
-
     def submit_prebudgets(self, election, expense_types, candidates):
         election = Election.objects.get(type=election['type'], year=election['year'])
 
@@ -457,7 +487,10 @@ class DjangoBackend(Backend):
 
             # Municipality given as String, do a lookup for an integer id.
             # Needed to identify the candidate
-            muni = Municipality.objects.get(name=cand['municipality']['name'])
+            try:
+                muni = Municipality.objects.get(name=cand['municipality']['name'])
+            except Municipality.DoesNotExist:
+                print "Unable to find '%s'" % cand['municipality']['name']
             cand['municipality'] = muni
 
             # Construct a String to describe person at hand (candidate)
