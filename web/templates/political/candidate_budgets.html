@@ -1,0 +1,50 @@
+{% extends "site_base.html" %}
+
+{% load i18n static compress %}
+
+{% block head_title %}Kunnallisvaaliehdokkaiden ennakkorahoitusilmoitukset{% endblock %}
+
+{% block extra_style %}
+{% endblock %}
+
+{% block extra_script %}
+{% compress js %}
+<script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
+{% endcompress %}
+
+{% compress js %}
+<script type="text/coffeescript">
+muni_dict = {{ muni_json|safe }}
+party_list = {{ party_json|safe }}
+
+$.ajax '/api/v1/municipality/'
+  dataType: 'json'
+  data:
+    limit: 1000
+    format: 'geojson'
+  error: (args1, args2) ->
+    alert "{% trans "Communication with server failed" %}"
+  success: (geojson) ->
+    for feat in geojson.features
+      muni = muni_dict[feat.id]
+      # If the muni is not found, it doesn't have the stats.
+      # We don't render those.
+      if not muni
+        feat.properties.render = false
+      else
+        _.extend(feat.properties, muni)
+      console.log feat.properties
+    # geojson is now ready to be passed to leaflet
+
+# The code below is run after the HTML document has finished loading.
+jQuery ->
+  console.log "here"
+
+</script>
+{% endcompress %}
+{% endblock %}
+
+{% block body %}
+  <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
+{% endblock %}
+

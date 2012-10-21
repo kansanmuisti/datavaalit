@@ -2,11 +2,13 @@ from django.template import RequestContext
 from django.shortcuts import render_to_response
 from social.models import *
 from political.models import *
+from political.api import *
 from geo.models import Municipality
 from django.core.urlresolvers import reverse
 from django.core.mail import mail_admins
 from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.db.models import Count
+from django.core.cache import cache
 import json
 
 def show_candidates_social_feeds(request):
@@ -30,25 +32,8 @@ def candidate_change_request(request):
     return render_to_response('political/candidate_change_request.html', args,
                               context_instance=RequestContext(request))
 
-def show_prebudget_stats(request):
-    import csv
-    f = open('110_kvaa_tau_103s.csv', 'r')
-    reader = csv.reader(f, delimiter=';')
-    election = Election.objects.get(type='muni', year=2012)
-    for row in reader:
-        if not row:
-            return
-        name = ' '.join(row[0].decode('iso8859-1').split(' ')[1:])
-        muni = Municipality.objects.filter(name=name)
-        if not muni:
-            continue
-        muni = muni[0]
-        db_count = muni.candidate_set.filter(election=election).count()
-        count = int(row[1])
-        if db_count != count:
-            print "%d: %d %d" % (muni.id, db_count, count)
 
-
+def _calc_prebudget_stats():
     # Find the list of candidates that have submitted the campaign prebudgets
     submitted_list = Candidate.objects.filter(expense__isnull=False).distinct()
     muni_list = Municipality.objects.all().annotate(num_candidates=Count('candidate')).filter(num_candidates__gt=0).order_by('name')
@@ -58,17 +43,37 @@ def show_prebudget_stats(request):
         muni_dict[muni.pk] = muni
         muni.num_submitted = 0
 
+    # Calculate how many candidates have submitted the budgets per muni.
+    # Also figure out when the candidate first submitted the prebudget.
     for cand in submitted_list:
         muni = muni_dict[cand.municipality_id]
         muni.num_submitted += 1
+        # Get the date of the earliest submission
+        cand.time_submitted = Expense.objects.filter(candidate=cand).order_by('time_added')[0]
 
-    num_cands = 0
+    args = {}
+
+    muni_dict = {}
     for muni in muni_list:
-        print "%s: %d / %d (%.2f)" % (muni, muni.num_submitted,
-            muni.num_candidates, float(muni.num_submitted) / muni.num_candidates)
-        num_cands += muni.num_candidates
-    print num_cands
+        m = {'num_submitted': muni.num_submitted,
+             'num_candidates': muni.num_candidates}
+        muni_dict[muni.pk] = m
+    args['muni_json'] = json.dumps(muni_dict, indent=None)
 
+    party_list = []
+    for p in Party.objects.all():
+        party_list.append({'id': p.pk, 'name': p.name})
+    args['party_json'] = json.dumps(party_list, ensure_ascii=False)
+    return args
+
+def show_prebudget_stats(request):
+    # The calculation takes a bit of time, so cache the results.
+    args = cache.get('prebudget_stats')
+    if not args:
+        args = _calc_prebudget_stats()
+        cache.set('prebudget_stats', args, 3600)
+    return render_to_response('political/candidate_budgets.html', args,
+                              context_instance=RequestContext(request))
 
 def candidate_change_request_form(request):
     if request.method == 'GET':
