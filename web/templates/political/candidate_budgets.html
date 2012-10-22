@@ -5,45 +5,47 @@
 {% block head_title %}Kunnallisvaaliehdokkaiden ennakkorahoitusilmoitukset{% endblock %}
 
 {% block extra_style %}
-	<link rel="stylesheet" href="http://leaflet.cloudmade.com/dist/leaflet.css" />
-	
-	<style>
-		#map {
-			width: 500px;
-			height: 650px;
-		}
-
-		.info {
-			padding: 6px 8px;
-			font: 14px/16px Arial, Helvetica, sans-serif;
-			background: white;
-			background: rgba(255,255,255,0.8);
-			box-shadow: 0 0 15px rgba(0,0,0,0.2);
-			border-radius: 5px;
-		}
-		.info h4 {
-			margin: 0 0 5px;
-			color: #777;
-		}
-
-		.legend {
-			text-align: left;
-			line-height: 18px;
-			color: #555;
-		}
-		.legend i {
-			width: 18px;
-			height: 18px;
-			float: left;
-			margin-right: 8px;
-			opacity: 0.7;
-		}
-	</style>
+<link rel="stylesheet" href="http://leaflet.cloudmade.com/dist/leaflet.css" />
+<style>
+#map {
+	width: 500px;
+	height: 650px;
+}
+.info {
+	padding: 6px 8px;
+	font: 14px/16px Arial, Helvetica, sans-serif;
+	background: white;
+	background: rgba(255,255,255,0.8);
+	box-shadow: 0 0 15px rgba(0,0,0,0.2);
+	border-radius: 5px;
+}
+.info h4 {
+	margin: 0 0 5px;
+	color: #777;
+}
+.legend {
+	text-align: left;
+	line-height: 18px;
+	color: #555;
+}
+.legend i {
+	width: 18px;
+	height: 18px;
+	float: left;
+	margin-right: 8px;
+	opacity: 0.7;
+}
+</style>
 {% endblock %}
 
 {% block extra_script %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
+{% endcompress %}
+
+{% compress js %}
+<script type="text/javascript" src="{% static "js/jquery.flot.js" %}"></script>
+<script type="text/javascript" src="{% static "js/jquery.flot.time.js" %}"></script>
 {% endcompress %}
 
 {% compress js %}
@@ -67,13 +69,36 @@ $.ajax '/api/v1/municipality/'
         feat.properties.render = false
       else
         _.extend(feat.properties, muni)
-      console.log feat.properties
+      #console.log feat.properties
     # geojson is now ready to be passed to leaflet
+
+flot_data = []
+for p in party_list
+  data = []
+  # Convert data into percentages
+  for dd in p.disclosure_data
+    perc = dd[1] / p.num_candidates
+    data.push([dd[0], perc])
+  # Include only parties that actually have candidates
+  # submitting budgets.
+  if data[data.length-1][1] != 0.0
+    flot_data.push
+      data: data
+      label: p.code
+
+flot_data = _.sortBy flot_data, (fd) ->
+  return 1 - fd.data[data.length-1][1]
+
+console.log flot_data
 
 # The code below is run after the HTML document has finished loading.
 jQuery ->
-  console.log "here"
-
+  $.plot $("#party-graph"), flot_data,
+    series:
+      lines:
+        show: true
+    xaxis:
+      mode: "time"
 </script>
 {% endcompress %}
 {% endblock %}
@@ -81,11 +106,11 @@ jQuery ->
 {% block body %}
   <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
   
-  <div id="map"></div>
+  <div id="party-graph" style="width: 600px; height: 300px;"></div>
+  <!-- <div id="map"></div>
 
 	<script src="http://leaflet.cloudmade.com/dist/leaflet.js"></script>
 
-	<script type="text/javascript" src="http://109.74.199.6:8080/datavaalit/muni_stats.js"></script>
 	<script type="text/javascript">
 
 		var southWest = new L.LatLng(61.5, 23.00),
@@ -219,6 +244,6 @@ jQuery ->
 		legend.addTo(map);
 
 	</script>
-  
+  -->
 {% endblock %}
 
