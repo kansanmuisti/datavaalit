@@ -72,6 +72,16 @@ $.ajax '/api/v1/municipality/'
       #console.log feat.properties
     # geojson is now ready to be passed to leaflet
 
+PARTY_COLORS =
+  'RKP': "#FFD87D",
+  'KOK': "#C7DDF3",
+  'KESK': "#9FD18B",
+  'KD': "#CCCCCC",
+  'PS': "#69B3E3",
+  'VIHR': "#DDE89A",
+  'SDP': "#F9C0C7",
+  'VAS': "#EC008C"
+
 flot_data = []
 for p in party_list
   data = []
@@ -82,9 +92,12 @@ for p in party_list
   # Include only parties that actually have candidates
   # submitting budgets.
   if data[data.length-1][1] != 0.0
-    flot_data.push
+    args =
       data: data
       label: p.code
+    if p.code of PARTY_COLORS
+      args.color = PARTY_COLORS[p.code]
+    flot_data.push args
 
 flot_data = _.sortBy flot_data, (fd) ->
   return 1 - fd.data[data.length-1][1]
