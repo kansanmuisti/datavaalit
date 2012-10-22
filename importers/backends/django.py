@@ -46,7 +46,43 @@ MATCH_TABLE = {
     'Marjo Helli Anneli Huusko (Helsinki)': {'first_name': 'Marjo (Mari)'},
     'Sirkka Liisa Ikkala (Kempele)': {'first_name': 'Sirkka-Liisa'},
     'Olli Pekka Hatanpää (Vihti)': {'first_name': 'Olli Pekka'},
-    'Martti Kustaa Lehto (Lahti)': {'first_name': 'Martti K.'}
+    'Martti Kustaa Lehto (Lahti)': {'first_name': 'Martti K.'},
+    'Riitta Alise Pekkala (Haapavesi)': {'first_name': 'Alice'},
+    'Markku Antero Huttunen (Kontiolahti)': {'first_name': 'Markku A.'},
+    'Anu Emilia Huovinen (Joensuu)': {'first_name': 'Anu Emilia'},
+    'Marko Pekka Piipponen (Joensuu)': {'first_name': 'Marko Pekka'},
+    'Ursula Erika Gerda Pütter (Joensuu)': {'first_name': 'Ulla'},
+    'Arja-Liisa Räisänen (Oulu)' : {'first_name': 'Alla'},
+    'John Christer Probus Liljelund (Espoo)' : {'first_name': 'Pi John'},
+    'Hanna Liisa Kokkola (Espoo)' : {'first_name': 'Hanna-Liisa'},
+    'Markku Jussi Jääskeläinen (Vantaa)' : {'first_name': 'Markku J'},
+    'Aleksander Holthoer (Lohja)' : {'first_name': 'Alexander'},
+    'Ana Maria Gutierrez Sorainen (Lohja)' : {'first_name': 'Ana Maria'},
+    'Mirja-Liisa Itälä (Sauvo)' : {'first_name': 'Mirja-Liisa, " Mirkku"'},
+    'Cornelis Johannes Plomp (Tampere)' : {'first_name': 'Johannes "Johan"'},
+    'Anna-Liisa Flink (Kuopio)' : {'first_name': 'Anna-Liisa "Ansku"'},
+    'Tapio Antero Osala (Vaasa)' : {'first_name': 'Tapio Antero'},
+    'Anthony Robin Melville (Jyväskylä)' : {'first_name': 'Tony'},
+    'Matti Vesa Volanen (Jyväskylä)' : {'first_name': 'Matti Vesa'},
+    'Ritva-Leena Laukkanen-Abbey (Jyväskylä)' : {'first_name': 'Ritva-Leena (Reena)'},
+    'Jukka Olavi Sipilä (Lieto)' : {'index': 0},
+    'Maija Liisa Päivikki Kairo (Raasepori)' : {'first_name': 'Maija-Liisa'},
+    'Raimo Kalevi Rönkkö (Raasepori)' : {'first_name': 'Raimo Kalevi'},
+    'Teuvo Viktor Riikonen (Savonlinna)' : {'first_name': 'Teuvo V.'},
+    'Veli Matti Sallinen (Kuhmo)' : {'first_name': 'Veli-Matti'},
+    'Charlotta Mari Söderholm (Helsinki)' : {'first_name': 'Lotta'},
+    'Anne Linnea Taskinen (Helsinki)' : {'first_name': 'Anne (Heinäsirkka)'},
+    'Eijariina Vartiainen (Helsinki)' : {'first_name': 'Eijariina (Kuuslahti)'},
+    'Tuomo Vilhelm Valokainen (Helsinki)' : {'first_name': 'Tuomo (Tumppi)'},
+    'Hanna Leena Rintakumpu (Forssa)' : {'first_name': 'Hanna-Leena'},
+    'Mirja Helena Kainulainen (Nurmijärvi)' : {'first_name': 'Milla'},
+    'Anna-Liisa Tapaninen (Suomussalmi)' : {'first_name': 'Anna Liisa'},
+    'Tuija Maaret Sinikka Pykäläinen (Lappeenranta)' : {'first_name': 'Tuija Maaret'},
+    'Marja Leena Andelmin (Salo)' : {'first_name': 'Marja-Leena'},
+    'Seija Sinikka Soljasalo (Mikkeli)' : {'first_name': 'Sini'},
+    'Gijsbert Hovestadt (Lahti)' : {'first_name': 'Bert'},
+    'Riitta Kaarina Marttinen (Jyväskylä)' : {'first_name': 'Rita'},
+    'Eva Maria Loikkanen (Vantaa)' : {'first_name': 'Eva Maria'}
 }
 
 class DjangoBackend(Backend):
@@ -163,7 +199,12 @@ class DjangoBackend(Backend):
                            'last_name__iexact': info['last_name'],
                            'municipality': info['municipality']}
             for k in fix_item.keys():
-                person_args['%s__iexact' % k] = fix_item[k].decode('utf8')
+                # Fix item can be an integer too, if it's an person index
+                if k == 'index':
+                    person_args['%s' % k] = fix_item[k]
+                else:
+                    person_args['%s__iexact' % k] = fix_item[k].decode('utf8')
+                
 
             self.logger.debug("Trying %s with fixed name" % person_str)
             self.logger.debug("%s" % person_args)
