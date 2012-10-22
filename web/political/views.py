@@ -1,3 +1,6 @@
+import json
+import time
+
 from django.template import RequestContext
 from django.shortcuts import render_to_response
 from social.models import *
@@ -9,7 +12,6 @@ from django.core.mail import mail_admins
 from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.db.models import Count
 from django.core.cache import cache
-import json
 
 def show_candidates_social_feeds(request):
     tw = {}
@@ -32,11 +34,35 @@ def candidate_change_request(request):
     return render_to_response('political/candidate_change_request.html', args,
                               context_instance=RequestContext(request))
 
+def _calc_submission_history(election, muni=None):
+    budget_list = CampaignBudget.objects.filter(candidate__election=election)
+    if muni:
+        budget_list = budget_list.filter(candidate__municipality=muni)
+    party_list = []
+    for p in Party.objects.all():
+        d = {'id': p.pk, 'name': p.name, 'code': p.code, 'disclosure_data': []}
+        cand_list = Candidate.objects.filter(election=election, party=p)
+        if muni:
+            cand_list.filter(municipality=muni)
+        d['num_candidates'] = cand_list.count()
+        party_list.append(d)
+
+    timestamps = budget_list.order_by('time_submitted').values_list('time_submitted', flat=True).distinct()
+    for ts in timestamps:
+        ts_epoch = int(time.mktime(ts.timetuple()) * 1000)
+        for p in party_list:
+            nr_submitted = budget_list.filter(candidate__party=p['id'], time_submitted__lte=ts).count()
+            p['disclosure_data'].append((ts_epoch, nr_submitted))
+
+    return json.dumps(party_list, ensure_ascii=False)
+
 
 def _calc_prebudget_stats():
+    args = {}
+    election = Election.objects.get(year=2012, type='muni')
     # Find the list of candidates that have submitted the campaign prebudgets
-    submitted_list = Prebudget.objects.all().distinct()
-    muni_list = Municipality.objects.all().annotate(num_candidates=Count('candidate')).filter(num_candidates__gt=0).order_by('name')
+    submitted_list = CampaignBudget.objects.filter(advance=True, candidate__election=election)
+    muni_list = Municipality.objects.annotate(num_candidates=Count('candidate')).filter(num_candidates__gt=0).order_by('name')
     muni_dict = {}
 
     for muni in muni_list:
@@ -44,12 +70,10 @@ def _calc_prebudget_stats():
         muni.num_submitted = 0
 
     # Calculate how many candidates have submitted the budgets per muni.
-    # Also figure out when the candidate first submitted the prebudget.
-    for preb in submitted_list:
-        muni = muni_dict[preb.candidate.municipality_id]
+    # Also figure out when the candidate first submitted the advance disclosure.
+    for budget in submitted_list:
+        muni = muni_dict[budget.candidate.municipality_id]
         muni.num_submitted += 1
-
-    args = {}
 
     muni_dict = {}
     for muni in muni_list:
@@ -57,11 +81,8 @@ def _calc_prebudget_stats():
              'num_candidates': muni.num_candidates}
         muni_dict[muni.pk] = m
     args['muni_json'] = json.dumps(muni_dict, indent=None)
+    args['party_json'] = _calc_submission_history(election)
 
-    party_list = []
-    for p in Party.objects.all():
-        party_list.append({'id': p.pk, 'name': p.name})
-    args['party_json'] = json.dumps(party_list, ensure_ascii=False)
     return args
 
 def show_prebudget_stats(request):

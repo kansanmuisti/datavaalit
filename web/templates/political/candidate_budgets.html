@@ -5,46 +5,50 @@
 {% block head_title %}Kunnallisvaaliehdokkaiden ennakkorahoitusilmoitukset{% endblock %}
 
 {% block extra_style %}
-	<link rel="stylesheet" href="{% static "css/leaflet.css" %}" />
-	
-	<style>
-		#map {
-			width: 500px;
-			height: 650px;
-		}
 
-		.info {
-			padding: 6px 8px;
-			font: 14px/16px Arial, Helvetica, sans-serif;
-			background: white;
-			background: rgba(255,255,255,0.8);
-			box-shadow: 0 0 15px rgba(0,0,0,0.2);
-			border-radius: 5px;
-		}
-		.info h4 {
-			margin: 0 0 5px;
-			color: #777;
-		}
+<link rel="stylesheet" href="http://leaflet.cloudmade.com/dist/leaflet.css" />
+<style>
+#map {
+	width: 500px;
+	height: 650px;
+}
+.info {
+	padding: 6px 8px;
+	font: 14px/16px Arial, Helvetica, sans-serif;
+	background: white;
+	background: rgba(255,255,255,0.8);
+	box-shadow: 0 0 15px rgba(0,0,0,0.2);
+	border-radius: 5px;
+}
+.info h4 {
+	margin: 0 0 5px;
+	color: #777;
+}
+.legend {
+	text-align: left;
+	line-height: 18px;
+	color: #555;
+}
+.legend i {
+	width: 18px;
+	height: 18px;
+	float: left;
+	margin-right: 8px;
+	opacity: 0.7;
+}
+</style>
 
-		.legend {
-			text-align: left;
-			line-height: 18px;
-			color: #555;
-		}
-		.legend i {
-			width: 18px;
-			height: 18px;
-			float: left;
-			margin-right: 8px;
-			opacity: 0.7;
-		}
-	</style>
 {% endblock %}
 
 {% block extra_script %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
 <script type="text/javascript" src="{% static "js/leaflet.js" %}"></script>
+{% endcompress %}
+
+{% compress js %}
+<script type="text/javascript" src="{% static "js/jquery.flot.js" %}"></script>
+<script type="text/javascript" src="{% static "js/jquery.flot.time.js" %}"></script>
 {% endcompress %}
 
 {% compress js %}
@@ -69,94 +73,138 @@ $.ajax '/api/v1/municipality/'
         feat.properties.render = false
       else
         _.extend(feat.properties, muni)
-      console.log feat.properties
+      #console.log feat.properties
     # geojson is now ready to be passed to leaflet
-	
+
+
+PARTY_COLORS =
+  'RKP': "#FFD87D",
+  'KOK': "#C7DDF3",
+  'KESK': "#9FD18B",
+  'KD': "#CCCCCC",
+  'PS': "#69B3E3",
+  'VIHR': "#DDE89A",
+  'SDP': "#F9C0C7",
+  'VAS': "#EC008C"
+
+flot_data = []
+for p in party_list
+  data = []
+  # Convert data into percentages
+  for dd in p.disclosure_data
+    perc = dd[1] / p.num_candidates
+    data.push([dd[0], perc])
+  # Include only parties that actually have candidates
+  # submitting budgets.
+  if data[data.length-1][1] != 0.0
+    args =
+      data: data
+      label: p.code
+    if p.code of PARTY_COLORS
+      args.color = PARTY_COLORS[p.code]
+    flot_data.push args
+
+flot_data = _.sortBy flot_data, (fd) ->
+  return 1 - fd.data[data.length-1][1]
+
+console.log flot_data
 
 # The code below is run after the HTML document has finished loading.
 jQuery ->
-  console.log "here"
-
+  $.plot $("#party-graph"), flot_data,
+    series:
+      lines:
+        show: true
+    xaxis:
+      mode: "time"
 </script>
 {% endcompress %}
 
-{% compress js %}
+{% block body %}
+  <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
 
-<!--<script type="text/javascript" src="http://109.74.199.6:8080/datavaalit/muni_stats.js"></script>-->
-<script type="text/javascript">
+  <div id="party-graph" style="width: 600px; height: 300px;"></div>
+  <!-- <div id="map"></div>
 
-	var southWest = new L.LatLng(61.5, 23.00),
-        northEast = new L.LatLng(68.50, 29.00),
-        bounds = new L.LatLngBounds(southWest, northEast);
-	var map = L.map('map', {
-		minZoom: 5,
-		maxZoom: 7, 
-        // Some basic options to keep the map still and prevent 
-        // the user from zooming and such.
-        scrollWheelZoom: true,
-        touchZoom: true,
-        doubleClickZoom: true,
-        zoomControl: true,
-        dragging: true
-    }).fitBounds(bounds);
+	<script src="http://leaflet.cloudmade.com/dist/leaflet.js"></script>
 
-	var cloudmade = L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
-		attribution: 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
-		key: 'BC9A493B41014CAABB98F0471D759707',
-		styleId: 22677
-	}).addTo(map);
+	<script type="text/javascript">
 
+		var southWest = new L.LatLng(61.5, 23.00),
+            northEast = new L.LatLng(68.50, 29.00),
+            bounds = new L.LatLngBounds(southWest, northEast);
+		var map = L.map('map', {
+			minZoom: 5,
+			maxZoom: 7,
+            // Some basic options to keep the map still and prevent
+            // the user from zooming and such.
+            scrollWheelZoom: true,
+            touchZoom: true,
+            doubleClickZoom: true,
+            zoomControl: true,
+            dragging: true
+        }).fitBounds(bounds);
 
-	// control that shows state info on hover
-	var info = L.control();
-
-	info.onAdd = function (map) {
-		this._div = L.DomUtil.create('div', 'info');
-		this.update();
-		return this._div;
-	};
-
-	info.update = function (props) {
-		this._div.innerHTML = '<h4>Vaalirahoituksen ennakkoilmoituksen</h4><h4>tehneiden ehdokkaiden osuus</h4>' +  (props ?
-			'<b>' + props.name + '</b> (' + props.ncandidates + ' ehdokasta)' + '<br />' + (props.prebudg_perc * 100).toFixed(0) + ' % tehnyt ennakkoilmoituksen'
-			: 'Vie osoitin kunnan päälle');
-	};
-
-	info.addTo(map);
+		var cloudmade = L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
+			attribution: 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
+			key: 'BC9A493B41014CAABB98F0471D759707',
+			styleId: 22677
+		}).addTo(map);
 
 
-	// get color depending on population density value
-	function getColor(d) {
-        return d > 0.40  ? '#1A9850' :
-        	   d > 0.30  ? '#91CF60' :		
-               d > 0.20  ? '#D9EF8B' :
-               d > 0.10  ? '#FEE08B' :
-               d > 0.01  ? '#FC8D59' :
-                           '#D73027';
-    } 
+		// control that shows state info on hover
+		var info = L.control();
 
-	function style(feature) {
-        return {
-            fillColor: getColor(feature.properties.prebudg_perc),
-            weight: 1,
-            color: '#666',
-            opacity: 0.6,
-            fillOpacity: 1.0
-        };
-    }
+		info.onAdd = function (map) {
+			this._div = L.DomUtil.create('div', 'info');
+			this.update();
+			return this._div;
+		};
 
-	function highlightFeature(e) {
-		var layer = e.target;
+		info.update = function (props) {
+			this._div.innerHTML = '<h4>Vaalirahoituksen ennakkoilmoituksen</h4><h4>tehneiden ehdokkaiden osuus</h4>' +  (props ?
+				'<b>' + props.name + '</b> (' + props.ncandidates + ' ehdokasta)' + '<br />' + (props.prebudg_perc * 100).toFixed(0) + ' % tehnyt ennakkoilmoituksen'
+				: 'Vie osoitin kunnan päälle');
+		};
 
-		layer.setStyle({
-			weight: 5,
-			color: '#666',
-			dashArray: '',
-			fillOpacity: 0.7
-		});
+		info.addTo(map);
 
-		if (!L.Browser.ie && !L.Browser.opera) {
-			layer.bringToFront();
+
+		// get color depending on population density value
+		function getColor(d) {
+            return d > 0.40  ? '#1A9850' :
+            	   d > 0.30  ? '#91CF60' :
+                   d > 0.20  ? '#D9EF8B' :
+                   d > 0.10  ? '#FEE08B' :
+                   d > 0.01  ? '#FC8D59' :
+                               '#D73027';
+        }
+
+		function style(feature) {
+            return {
+                fillColor: getColor(feature.properties.prebudg_perc),
+                weight: 1,
+                color: '#666',
+                opacity: 0.6,
+                fillOpacity: 1.0
+            };
+        }
+
+		function highlightFeature(e) {
+			var layer = e.target;
+
+			layer.setStyle({
+				weight: 5,
+				color: '#666',
+				dashArray: '',
+				fillOpacity: 0.7
+			});
+
+			if (!L.Browser.ie && !L.Browser.opera) {
+				layer.bringToFront();
+			}
+
+			info.update(layer.feature.properties);
 		}
 
 		info.update(layer.feature.properties);
@@ -219,12 +267,7 @@ jQuery ->
 
 {% endcompress %}
 
-{% endblock %}
-
-{% block body %}
-  <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
-  
-  <div id="map"></div>
-  
+	</script>
+  -->
 {% endblock %}
 

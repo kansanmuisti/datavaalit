@@ -112,14 +112,19 @@ class CandidateFeed(Feed):
         s = super(CandidateFeed, self).__unicode__()
         return "%s (for %s)" % (s, unicode(self.candidate))
 
-class Prebudget(models.Model):
-    '''Reference to overall campaing budget.
-    '''
+class CampaignBudget(models.Model):
     # TODO: could add different timestamps here
     candidate = models.ForeignKey(Candidate, db_index=True)
-    time_added = models.DateTimeField()
+    # Time of first disclosure for the candidate
+    time_submitted = models.DateTimeField()
+    # Indicates if it's an advance disclosure or the final one
+    advance = models.BooleanField()
 
-class ExpenseType(models.Model):
+    class Meta:
+        # A candidate can have only one budget of each type.
+        unique_together = (('candidate', 'advance'),)
+
+class CampaignExpenseType(models.Model):
     '''Models different types of expenses a campaign can have.
     '''
     name = models.CharField(max_length=25, unique=True)
@@ -128,23 +133,17 @@ class ExpenseType(models.Model):
     def __unicode__(self):
         return self.name
 
-class Expense(models.Model):
+class CampaignExpense(models.Model):
     '''Models different election campaign expenses.
     '''
-    prebudget = models.ForeignKey(Prebudget, db_index=True)
-    type = models.ForeignKey(ExpenseType)
+    budget = models.ForeignKey(CampaignBudget, db_index=True)
+    type = models.ForeignKey(CampaignExpenseType)
     sum = models.DecimalField(max_digits=15, decimal_places=2)
-    time_added = models.DateTimeField()
+    time_submitted = models.DateTimeField()
 
     class Meta:
-        unique_together = (('prebudget', 'type'),)
+        unique_together = (('budget', 'type'),)
 
     def __unicode__(self):
-        return "%s / %s: %s (added %s)" % (self.prebudget.candidate, self.type.name,
-                        self.sum, self.time_added)
-
-class ExpenseHistory(models.Model):
-    '''Stores the date the candidate first left their
-       campaign expense report.'''
-    candidate = models.ForeignKey(Candidate, db_index=True)
-    time_added = models.DateTimeField()
+        return "%s / %s: %s (added %s)" % (self.budget.candidate, self.type.name,
+                        self.sum, self.time_submitted)
