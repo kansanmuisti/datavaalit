@@ -5,8 +5,8 @@
   CAST(COUNT(prebudgets.candidate_id) AS FLOAT) / CAST(parties.candidates AS FLOAT) AS percent
 FROM 
   (SELECT 
-     DISTINCT(political_prebudget.candidate_id) AS candidate_id 
-   FROM political_prebudget) AS prebudgets,
+     DISTINCT(political_campaignbudget.candidate_id) AS candidate_id 
+   FROM political_campaignbudget) AS prebudgets,
   (SELECT 
      COUNT(political_candidate.id) AS candidates, 
      political_candidate.party_id AS party_id

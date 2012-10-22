@@ -147,6 +147,7 @@ class VaalirahoitusImporter(Importer):
                 '&eacute;': 'é',
                 '&aacute;': 'á',
                 '&oslash;': 'ø',
+                '&igrave;': 'ì'
             }
             changed = []
             html_ent = re.compile(r"&[a-z]+;")
