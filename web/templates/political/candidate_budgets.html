@@ -5,7 +5,7 @@
 {% block head_title %}Kunnallisvaaliehdokkaiden ennakkorahoitusilmoitukset{% endblock %}
 
 {% block extra_style %}
-	<link rel="stylesheet" href="http://leaflet.cloudmade.com/dist/leaflet.css" />
+	<link rel="stylesheet" href="{% static "css/leaflet.css" %}" />
 	
 	<style>
 		#map {
@@ -44,6 +44,7 @@
 {% block extra_script %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
+<script type="text/javascript" src="{% static "js/leaflet.js" %}"></script>
 {% endcompress %}
 
 {% compress js %}
@@ -59,6 +60,7 @@ $.ajax '/api/v1/municipality/'
   error: (args1, args2) ->
     alert "{% trans "Communication with server failed" %}"
   success: (geojson) ->
+    console.log geojson
     for feat in geojson.features
       muni = muni_dict[feat.id]
       # If the muni is not found, it doesn't have the stats.
@@ -69,6 +71,7 @@ $.ajax '/api/v1/municipality/'
         _.extend(feat.properties, muni)
       console.log feat.properties
     # geojson is now ready to be passed to leaflet
+	
 
 # The code below is run after the HTML document has finished loading.
 jQuery ->
@@ -76,149 +79,152 @@ jQuery ->
 
 </script>
 {% endcompress %}
+
+{% compress js %}
+
+<!--<script type="text/javascript" src="http://109.74.199.6:8080/datavaalit/muni_stats.js"></script>-->
+<script type="text/javascript">
+
+	var southWest = new L.LatLng(61.5, 23.00),
+        northEast = new L.LatLng(68.50, 29.00),
+        bounds = new L.LatLngBounds(southWest, northEast);
+	var map = L.map('map', {
+		minZoom: 5,
+		maxZoom: 7, 
+        // Some basic options to keep the map still and prevent 
+        // the user from zooming and such.
+        scrollWheelZoom: true,
+        touchZoom: true,
+        doubleClickZoom: true,
+        zoomControl: true,
+        dragging: true
+    }).fitBounds(bounds);
+
+	var cloudmade = L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
+		attribution: 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
+		key: 'BC9A493B41014CAABB98F0471D759707',
+		styleId: 22677
+	}).addTo(map);
+
+
+	// control that shows state info on hover
+	var info = L.control();
+
+	info.onAdd = function (map) {
+		this._div = L.DomUtil.create('div', 'info');
+		this.update();
+		return this._div;
+	};
+
+	info.update = function (props) {
+		this._div.innerHTML = '<h4>Vaalirahoituksen ennakkoilmoituksen</h4><h4>tehneiden ehdokkaiden osuus</h4>' +  (props ?
+			'<b>' + props.name + '</b> (' + props.ncandidates + ' ehdokasta)' + '<br />' + (props.prebudg_perc * 100).toFixed(0) + ' % tehnyt ennakkoilmoituksen'
+			: 'Vie osoitin kunnan päälle');
+	};
+
+	info.addTo(map);
+
+
+	// get color depending on population density value
+	function getColor(d) {
+        return d > 0.40  ? '#1A9850' :
+        	   d > 0.30  ? '#91CF60' :		
+               d > 0.20  ? '#D9EF8B' :
+               d > 0.10  ? '#FEE08B' :
+               d > 0.01  ? '#FC8D59' :
+                           '#D73027';
+    } 
+
+	function style(feature) {
+        return {
+            fillColor: getColor(feature.properties.prebudg_perc),
+            weight: 1,
+            color: '#666',
+            opacity: 0.6,
+            fillOpacity: 1.0
+        };
+    }
+
+	function highlightFeature(e) {
+		var layer = e.target;
+
+		layer.setStyle({
+			weight: 5,
+			color: '#666',
+			dashArray: '',
+			fillOpacity: 0.7
+		});
+
+		if (!L.Browser.ie && !L.Browser.opera) {
+			layer.bringToFront();
+		}
+
+		info.update(layer.feature.properties);
+	}
+
+	var geojson;
+
+	function resetHighlight(e) {
+		geojson.resetStyle(e.target);
+		info.update();
+	}
+
+	function zoomToFeature(e) {
+		map.fitBounds(e.target.getBounds());
+	}
+
+	function onEachFeature(feature, layer) {
+		layer.on({
+			mouseover: highlightFeature,
+			mouseout: resetHighlight,
+			click: zoomToFeature
+		});
+	}
+
+	geojson = L.geoJson(geojson, {
+		style: style,
+		onEachFeature: onEachFeature
+	}).addTo(map);
+
+	//map.attributionControl.addAttribution('Population data &copy; <a href="http://census.gov/">US Census Bureau</a>');
+
+
+	var legend = L.control({position: 'bottomright'});
+
+	legend.onAdd = function (map) {
+
+		var div = L.DomUtil.create('div', 'info legend'),
+			grades = [0.0, 0.01, 0.10, 0.20, 0.30, 0.40],
+			labels = [],
+			from, from_pr, to, to_pr;
+
+		for (var i = 0; i < grades.length; i++) {
+			from = grades[i];
+			from_pr = (from * 100).toFixed(0)
+			to = grades[i + 1];
+			to_pr = (to * 100).toFixed(0)
+
+			labels.push(
+				'<i style="background:' + getColor(from + 0.01) + '"></i> ' +
+				from_pr + ' % ' + (to ? ' &ndash; ' + to_pr + ' % ' : '+'));
+		}
+
+		div.innerHTML = labels.join('<br>');
+		return div;
+	};
+
+	legend.addTo(map);
+
+</script>
+
+{% endcompress %}
+
 {% endblock %}
 
 {% block body %}
   <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
   
   <div id="map"></div>
-
-	<script src="http://leaflet.cloudmade.com/dist/leaflet.js"></script>
-
-	<script type="text/javascript" src="http://109.74.199.6:8080/datavaalit/muni_stats.js"></script>
-	<script type="text/javascript">
-
-		var southWest = new L.LatLng(61.5, 23.00),
-            northEast = new L.LatLng(68.50, 29.00),
-            bounds = new L.LatLngBounds(southWest, northEast);
-		var map = L.map('map', {
-			minZoom: 5,
-			maxZoom: 7, 
-            // Some basic options to keep the map still and prevent 
-            // the user from zooming and such.
-            scrollWheelZoom: true,
-            touchZoom: true,
-            doubleClickZoom: true,
-            zoomControl: true,
-            dragging: true
-        }).fitBounds(bounds);
-
-		var cloudmade = L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png', {
-			attribution: 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
-			key: 'BC9A493B41014CAABB98F0471D759707',
-			styleId: 22677
-		}).addTo(map);
-
-
-		// control that shows state info on hover
-		var info = L.control();
-
-		info.onAdd = function (map) {
-			this._div = L.DomUtil.create('div', 'info');
-			this.update();
-			return this._div;
-		};
-
-		info.update = function (props) {
-			this._div.innerHTML = '<h4>Vaalirahoituksen ennakkoilmoituksen</h4><h4>tehneiden ehdokkaiden osuus</h4>' +  (props ?
-				'<b>' + props.name + '</b> (' + props.ncandidates + ' ehdokasta)' + '<br />' + (props.prebudg_perc * 100).toFixed(0) + ' % tehnyt ennakkoilmoituksen'
-				: 'Vie osoitin kunnan päälle');
-		};
-
-		info.addTo(map);
-
-
-		// get color depending on population density value
-		function getColor(d) {
-            return d > 0.40  ? '#1A9850' :
-            	   d > 0.30  ? '#91CF60' :		
-                   d > 0.20  ? '#D9EF8B' :
-                   d > 0.10  ? '#FEE08B' :
-                   d > 0.01  ? '#FC8D59' :
-                               '#D73027';
-        } 
-
-		function style(feature) {
-            return {
-                fillColor: getColor(feature.properties.prebudg_perc),
-                weight: 1,
-                color: '#666',
-                opacity: 0.6,
-                fillOpacity: 1.0
-            };
-        }
-
-		function highlightFeature(e) {
-			var layer = e.target;
-
-			layer.setStyle({
-				weight: 5,
-				color: '#666',
-				dashArray: '',
-				fillOpacity: 0.7
-			});
-
-			if (!L.Browser.ie && !L.Browser.opera) {
-				layer.bringToFront();
-			}
-
-			info.update(layer.feature.properties);
-		}
-
-		var geojson;
-
-		function resetHighlight(e) {
-			geojson.resetStyle(e.target);
-			info.update();
-		}
-
-		function zoomToFeature(e) {
-			map.fitBounds(e.target.getBounds());
-		}
-
-		function onEachFeature(feature, layer) {
-			layer.on({
-				mouseover: highlightFeature,
-				mouseout: resetHighlight,
-				click: zoomToFeature
-			});
-		}
-
-		geojson = L.geoJson(geojson, {
-			style: style,
-			onEachFeature: onEachFeature
-		}).addTo(map);
-
-		//map.attributionControl.addAttribution('Population data &copy; <a href="http://census.gov/">US Census Bureau</a>');
-
-
-		var legend = L.control({position: 'bottomright'});
-
-		legend.onAdd = function (map) {
-
-			var div = L.DomUtil.create('div', 'info legend'),
-				grades = [0.0, 0.01, 0.10, 0.20, 0.30, 0.40],
-				labels = [],
-				from, from_pr, to, to_pr;
-
-			for (var i = 0; i < grades.length; i++) {
-				from = grades[i];
-				from_pr = (from * 100).toFixed(0)
-				to = grades[i + 1];
-				to_pr = (to * 100).toFixed(0)
-
-				labels.push(
-					'<i style="background:' + getColor(from + 0.01) + '"></i> ' +
-					from_pr + ' % ' + (to ? ' &ndash; ' + to_pr + ' % ' : '+'));
-			}
-
-			div.innerHTML = labels.join('<br>');
-			return div;
-		};
-
-		legend.addTo(map);
-
-	</script>
   
 {% endblock %}
 
