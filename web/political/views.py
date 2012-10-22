@@ -34,9 +34,10 @@ def candidate_change_request(request):
 
 
 def _calc_prebudget_stats():
+    election = Election.objects.get(year=2012, type='muni')
     # Find the list of candidates that have submitted the campaign prebudgets
-    submitted_list = Prebudget.objects.all().distinct()
-    muni_list = Municipality.objects.all().annotate(num_candidates=Count('candidate')).filter(num_candidates__gt=0).order_by('name')
+    submitted_list = CampaignBudget.objects.filter(advance=True, candidate__election=election)
+    muni_list = Municipality.objects.annotate(num_candidates=Count('candidate')).filter(num_candidates__gt=0).order_by('name')
     muni_dict = {}
 
     for muni in muni_list:
@@ -44,9 +45,9 @@ def _calc_prebudget_stats():
         muni.num_submitted = 0
 
     # Calculate how many candidates have submitted the budgets per muni.
-    # Also figure out when the candidate first submitted the prebudget.
-    for preb in submitted_list:
-        muni = muni_dict[preb.candidate.municipality_id]
+    # Also figure out when the candidate first submitted the advance disclosure.
+    for budget in submitted_list:
+        muni = muni_dict[budget.candidate.municipality_id]
         muni.num_submitted += 1
 
     args = {}
@@ -62,6 +63,7 @@ def _calc_prebudget_stats():
     for p in Party.objects.all():
         party_list.append({'id': p.pk, 'name': p.name})
     args['party_json'] = json.dumps(party_list, ensure_ascii=False)
+
     return args
 
 def show_prebudget_stats(request):

@@ -445,7 +445,7 @@ class DjangoBackend(Backend):
         self.logger.info("Backend received %s candidates" % len(candidates))
 
         # First, populate ExpenseType table if not populated already
-        stored_types = list(ExpenseType.objects.all())
+        stored_types = list(CampaignExpenseType.objects.all())
         count = 0
         for et in expense_types:
             for et_obj in stored_types:
@@ -458,14 +458,14 @@ class DjangoBackend(Backend):
                 break
             else:
                 # Not found
-                et_obj = ExpenseType(name=et['name'],
-                                     description=et['description'])
+                et_obj = CampaignExpenseType(name=et['name'],
+                                             description=et['description'])
                 et_obj.save()
                 count += 1
         if count:
             self.logger.info("%d new expense types added" % count)
         # Replace the incoming list with the stored objects.
-        expense_types = ExpenseType.objects.all()
+        expense_types = CampaignExpenseType.objects.all()
 
         # Populate the candidate expenses reporting table
         # TODO: for now, there is only 1 timestamp per record (i.e. candidate)
@@ -523,17 +523,17 @@ class DjangoBackend(Backend):
             
             # Get the overall prebudget
             try:
-                prebudget = Prebudget.objects.get(candidate=candidate)
+                budget = CampaignBudget.objects.get(candidate=candidate, advance=True)
 
-                # If there is an existing prebudget, use that
+                # If there is an existing budget, use that
                 # What expenses (if any) has person got in the Expense table
-                db_expenses = list(Expense.objects.filter(prebudget=prebudget))
-            # There is no previous prebudget, hence there can be no expenses
-            except Prebudget.DoesNotExist:
-                prebudget = Prebudget(candidate=candidate,
-                                      time_added=cand['timestamp'])
-                prebudget.save()
-                msg = "Created a new prebudget for %s" % person_str
+                db_expenses = list(CampaignExpense.objects.filter(budget=budget))
+            except CampaignBudget.DoesNotExist:
+                # There is no previous prebudget, hence there can be no expenses
+                budget = CampaignBudget(candidate=candidate, advance=True,
+                                        time_submitted=cand['timestamp'])
+                budget.save()
+                msg = "Created a new campaign budget for %s" % person_str
                 self.logger.debug(msg)
 
             # Is the expense list empty?
@@ -560,10 +560,9 @@ class DjangoBackend(Backend):
                     break
                 else:
                     # Create a new expense item
-                    new_expense = Expense(prebudget=prebudget,
-                                          type=exp_type,
-                                          sum=exp['value'],
-                                          time_added=cand['timestamp'])
+                    new_expense = CampaignExpense(budget=budget, type=exp_type,
+                                                  sum=exp['value'],
+                                                  time_submitted=cand['timestamp'])
                     new_expense.save()
                     msg = "New expense for %s: %s = %s" % (person_str, exp_type.name, new_expense.sum)
                     self.logger.debug(msg)
