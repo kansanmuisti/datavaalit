@@ -87,7 +87,10 @@ PARTY_COLORS =
   'PS': "#69B3E3",
   'VIHR': "#DDE89A",
   'SDP': "#F9C0C7",
-  'VAS': "#EC008C"
+  'VAS': "#EC008C",
+  'PIR': "#888888",
+  'SKP': "red",
+
 
 flot_data = []
 for p in party_list
@@ -98,7 +101,8 @@ for p in party_list
     data.push([dd[0], perc])
   # Include only parties that actually have candidates
   # submitting budgets.
-  if data[data.length-1][1] != 0.0
+  last_percent = data[data.length-1][1]
+  if last_percent != 0.0
     args =
       data: data
       label: p.code
@@ -239,6 +243,14 @@ jQuery ->
         show: true
     xaxis:
       mode: "time"
+      timeformat: "%d.%m."
+    yaxis:
+      tickFormatter: (num, obj) ->
+        return "" + (num * 100).toFixed(0) + " %"
+    grid:
+      hoverable: true
+    legend:
+      container: $("#party-legend")
   init_map()
 </script>
 {% endcompress %}
@@ -246,8 +258,10 @@ jQuery ->
 
 {% block body %}
   <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
-  
-  <div id="party-graph" style="width: 600px; height: 300px;"></div>
+  <div style="position: relative">
+    <div id="party-graph" style="width: 600px; height: 300px;"></div>
+    <div id="party-legend" style="position: absolute; left: 600px; top: 20px"></div>
+  </div>
   <div id="map"></div>
 {% endblock %}
 
