@@ -8,9 +8,16 @@
 <link rel="stylesheet" href="http://leaflet.cloudmade.com/dist/leaflet.css" />
 <style>
 #map {
-	width: 500px;
+	width: 450px;
 	height: 650px;
+	
+	margin: 40px 0 40px;
 }
+
+.leaflet-container {
+    background: none repeat scroll 0 0 #F5F5F5;
+}
+
 .info {
 	padding: 6px 8px;
 	font: 14px/16px Arial, Helvetica, sans-serif;
@@ -18,7 +25,9 @@
 	background: rgba(255,255,255,0.8);
 	box-shadow: 0 0 15px rgba(0,0,0,0.2);
 	border-radius: 5px;
+	right: 0px;
 }
+
 .info h4 {
 	margin: 0 0 5px;
 	color: #777;
@@ -117,13 +126,10 @@ handle_geojson = (json) ->
   alert "Bug!"
 
 init_map = ->
-  south_west = new L.LatLng(61.5, 23.00)
-  north_east = new L.LatLng(68.50, 29.00)
-  bounds = new L.LatLngBounds(south_west, north_east)
 
   map = L.map('map',
     minZoom: 5,
-    maxZoom: 7,
+    maxZoom: 6,
     # Some basic options to keep the map still and prevent
     # the user from zooming and such.
     scrollWheelZoom: true,
@@ -131,13 +137,14 @@ init_map = ->
     doubleClickZoom: true,
     zoomControl: true,
     dragging: true
-  ).fitBounds(bounds);
+  );
 
-  cloudmade = L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png',
-    attribution: 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
-    key: 'BC9A493B41014CAABB98F0471D759707',
-    styleId: 22677
-  ).addTo(map);
+  #cloudmade = L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png',
+  #  attribution: 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
+  #  key: 'BC9A493B41014CAABB98F0471D759707',
+  #  styleId: 22677
+  #).addTo(map);
+  
 
   # control that shows state info on hover
   info = L.control();
@@ -148,7 +155,7 @@ init_map = ->
     @._div;
   info.update = (props) ->
     console.log props
-    s = '<h4>Vaalirahoituksen ennakkoilmoituksen</h4><h4>tehneiden ehdokkaiden osuus</h4>'
+    s = ''
     if props
       perc = props.num_submitted / props.num_candidates
       s += '<b>' + props.name + '</b> (' + props.num_candidates + ' ehdokasta)' + '<br />' + (perc * 100).toFixed(0) + ' % tehnyt ennakkoilmoituksen'
@@ -234,7 +241,17 @@ init_map = ->
       style: style,
       onEachFeature: on_each_feature
     ).addTo(map)
-
+    bounds = geojson.getBounds();
+    # Adjust the bounds manually
+    offset = 6
+    bounds["_southWest"]["lat"] = bounds["_southWest"]["lat"] - offset
+    bounds["_southWest"]["lng"] = bounds["_southWest"]["lng"] - offset
+    bounds["_northEast"]["lat"] = bounds["_northEast"]["lat"] + offset
+    bounds["_northEast"]["lng"] = bounds["_northEast"]["lng"] + offset
+    console.log bounds
+    map.fitBounds(bounds).setMaxBounds(bounds)
+    map.panTo([66.0, 27.8])
+ 
 # The code below is run after the HTML document has finished loading.
 jQuery ->
   $.plot $("#party-graph"), flot_data,
@@ -257,11 +274,55 @@ jQuery ->
 {% endblock %}
 
 {% block body %}
-  <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
-  <div style="position: relative">
-    <div id="party-graph" style="width: 600px; height: 300px;"></div>
-    <div id="party-legend" style="position: absolute; left: 600px; top: 20px"></div>
+  <div class="row-fluid">
+  	
+  	<h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
+		  
+  	<div class=span8 offset4>
+  	
+  		  <p>
+		  	Tämän sivun kuvaajat perustuvat <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia.html">
+		  	Puolue- ja vaalirahoitusvalvonnan</a> rekisteröimiin vaalirahoituksen
+		  	ennakkoilmoituksiin. Ennakkoilmoiksen tekeminen on vapaaehtoista ja 
+		  	varsinaisen vaalirahoitusilmoituksen tekevät vaalien tuloksen 
+		  	vahvistamisen jälkeen valittu ja vaalien tulosta vahvistettaessa varaedustajaksi 
+		  	määrätty. 
+		  </p>
+		  
+		  <p>
+		  	Ennakkoilmoitukset on koostettu hakemalla <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia/raportit/Tietoaineistot.html.stx">
+		    VRV:n julkaisemia tietoaineistoja</a> automaattisesti ja 
+		    päivittämällä tiedot datavaalien tietokantaan.
+		  </p>
+		  
+		  <p>
+		  	Tilanne on viimeksi päivitetty XX.XX.XXXX XX:XX, jolloin 
+		  	ennakkoilmoituksen on jättänyt XX ehdokasta. 
+		  </p>
+  	
+		  <h4>Koska ennakkoilmoituksia on jätetty?</h4>
+		  
+		  <p>
+		  	 Kuvaaja kertoo, kuinka ennakkoilmoituksia on kertynyt eri 
+		  	 puolueiden ehdokkailta kunnallisvaalien lähestyessä.
+		  </p>
+		  
+		  <div style="position: relative; margin: 40px 0 40px 0;">
+		    <div id="party-graph" style="width: 600px; height: 300px;"></div>
+		    <div id="party-legend" style="position: absolute; left: 600px; top: 20px"></div>
+		  </div>
+	  </div>
+  </div
+
+  <hr />
+  
+  <div class="row-fluid">
+  	<div class=span8 offset4>
+	  	
+		<h4>Ennakkoilmoituksen tehneiden ehdokkaiden osuus kunnittain</h4>  	
+	  	<div id="map"></div>
+	
+	</div>
   </div>
-  <div id="map"></div>
 {% endblock %}
 
