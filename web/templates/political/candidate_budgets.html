@@ -218,6 +218,7 @@ render_plots = (party_list) ->
         show: true
         align: "center"
     grid:
+      show: true
       borderWidth: 0
     legend:
       show: false
@@ -427,7 +428,16 @@ jQuery ->
   	<div class="row-fluid">
   		<div class=span12>
   		
-  		  <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
+  		  <div class="hero-unit">
+  		  	<h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
+  		  	<p>
+  		  		Kunnallisvaaliehdokkaiden on mahdollista tehdä ennakkoilmoitus 
+  		  		vaalikampanjansa rahoituksesta jo ennen mahdollista valituksi 
+  		  		tulemista. Kuinka moni on valmis avaamaan vaalirahoituksensa 
+  		  		etukäteen ja kuinka ennakkoilmoituksia on täytetty eri 
+  		  		puolueissa?
+  		    </p>
+  		  </div>
   		
   		  <p>
 		  	Tämän sivun kuvaajat perustuvat <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia.html">
@@ -477,8 +487,8 @@ jQuery ->
 		</div>
   
   <div class="row-fluid">
-  	<div class="span12">
-	  		
+	  
+	  <div class="span4">		
 	  	<h4>Ennakkoilmoituksen tehneiden ehdokkaiden osuus kunnittain</h4>  	
 	  	
 	  	<p>
@@ -486,24 +496,12 @@ jQuery ->
 	  		kunkin kunnan ehdokkaista on tehnyt vaalirahoituksen 
 	  		ennakkoilmoituksen. Viemällä osoittimen kunnan päälle päivittyvät
 	  		oikealla olevat kuvaajat kyseisen kunnan tiedoilla. 
-	  	</p>
-	  	
-	  	<p>
-	  		Jotkin kunnat puuttuvat kokonaan kartalta, sillä niissä ei ole 
+	  	    Jotkin kunnat puuttuvat kokonaan kartalta, sillä niissä ei ole 
 	  		virallisesti yhtään ehdokasta usein tulevien kuntaliitosten takia. 
-	  		Esimerkiksi <a href="http://www.kerimaki.fi/index.php?tid=310">Kerimäen kunnan verkkosivuilla</a> kerrotaan: 
-	  		
-	  		<blockquote>
-	  			Vuoden 2012 kunnallisvaalit toimitetaan uutta kuntajakoa 
-	  			noudattaen ja siten äänioikeusrekisteriin on myös Kerimäen ja 
-	  			Punkaharjun kunnan alueella asuvien kotikunnaksi merkitty 
-	  			Savonlinna.
-	  		</blockquote>
-	  		
 	  	</p>
-	  	
-	  	<hr />
-	  	
+	 </div> 	
+	 
+	 <div class="span4"> 	
 		<h4>Milloin ehdokkaat ovat ilmoituksia jättäneet?</h4>
 		  
 		<p>
@@ -513,18 +511,29 @@ jQuery ->
 	  		vaaleihin asti. Vaalien jälkeen sivulle päivitetään valituksi 
 	  		tulleiden vaalirahoitustiedot.
 		</p>
+	 </div>
 		
-		<hr />
-		
+	 <div class="span4">	
 		<h4>Kuinka paljon ehdokkaita on puolueittain?</h4>
 		  
 		<p>
 	  		Oikealla alhaalla oleva kuvaaja näyttää kuinka paljon ehdokkaita
 	  		eri puolueilla on maanlaajuisesti ja kunnittain. 
 		</p>
-	  	
-	
+     </div>
 	</div>
+	 
+	<div class="row-fluid">
+	 <div class="span12">
+		<hr />
+		<h4>Löysitkö virheen tai keksitkö parannettavaa?</h4>
+		  
+		<p>
+	  		Voit avata uuden issuen tai kommentoida vanhoja datavaalien 
+	  		<a href="https://github.com/kansanmuisti/datavaalit/issues?state=open">
+	  			GitHub-sivuilla</a>. 
+		</p>
+	 </div> 	
   </div>
 {% endblock %}
 
