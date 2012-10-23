@@ -281,7 +281,6 @@ update_plots = (muni_id, muni_name) ->
       alert "{% trans "Communication with server failed" %}"
     success: (data) ->
       spinner.stop()
-      delete spinner
       party_list = data
       $(".muni-selection").html(muni_name)
       render_plots party_list
