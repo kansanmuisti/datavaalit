@@ -144,27 +144,31 @@ render_plots = (party_list) ->
   num_data = []
   num_ticks = []
   i = 0
+  if party_list.length > 10
+    do_filtering = true
+
   for p in party_list
-    args =
-      label: p.code
-      data: [[i, p.num_candidates]]
-    if p.code of PARTY_COLORS
-      args.color = PARTY_COLORS[p.code]
-    num_data.push args
-    num_ticks.push [i, p.code]
-    i++
+    if not do_filtering or p.num_candidates > 40
+      args =
+        label: p.code
+        data: [[i, p.num_candidates]]
+      if p.code of PARTY_COLORS
+        args.color = PARTY_COLORS[p.code]
+      num_data.push args
+      num_ticks.push [i, p.code]
+      i++
 
     data = []
     # Convert data into percentages
     for dd in p.disclosure_data
       perc = dd[1] / p.num_candidates
       data.push([dd[0], perc])
-    # Include only parties that actually have candidates
-    # submitting budgets.
     if not data.length
       continue
+    # Include only parties that actually have candidates
+    # submitting budgets.
     last_percent = data[data.length-1][1]
-    if last_percent == 0.0
+    if do_filtering and last_percent == 0.0
       continue
     args =
       data: data
@@ -174,9 +178,6 @@ render_plots = (party_list) ->
     args.party = p
     cumulative_data.push args 
 
-  console.log "data set!"
-  console.log cumulative_data
-  console.log cumulative_data.length
   if not cumulative_data.length
     $("#party-graph").unbind("plothover")
     $("#party-graph").html("<h4>Ei ennakkoilmoituksia.</h4>")
@@ -208,7 +209,6 @@ render_plots = (party_list) ->
       legend:
         container: $("#party-legend")
 
-  console.log num_data
   $.plot $("#candidate-graph"), num_data,
     series:
       bars:
@@ -218,7 +218,6 @@ render_plots = (party_list) ->
       borderWidth: 0
     legend:
       show: false
-      #container: $("#candidate-legend")
     xaxis:
       ticks: num_ticks
 
@@ -230,7 +229,6 @@ render_plots = (party_list) ->
     leg_el = $("#party-legend")
     leg_el.find("tr").removeClass("highlight")
 
-    console.log cumulative_data
     dataset = cumulative_data
     # find the nearest point, x-wise
     series = dataset[0]

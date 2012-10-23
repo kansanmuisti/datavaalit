@@ -42,9 +42,11 @@ def _calc_submission_history(election, muni=None):
     if ret:
         return ret
 
-    budget_list = CampaignBudget.objects.filter(candidate__election=election)
+    budget_list_base = CampaignBudget.objects.filter(candidate__election=election)
     if muni:
-        budget_list = budget_list.filter(candidate__municipality=muni)
+        budget_list = budget_list_base.filter(candidate__municipality=muni)
+    else:
+        budget_list = budget_list_base
     party_list = []
     for p in Party.objects.all():
         d = {'id': p.pk, 'name': p.name, 'code': p.code, 'disclosure_data': []}
@@ -57,7 +59,8 @@ def _calc_submission_history(election, muni=None):
             continue
         party_list.append(d)
 
-    timestamps = budget_list.order_by('time_submitted').values_list('time_submitted', flat=True).distinct()
+    # Get the timestamps from all munis
+    timestamps = budget_list_base.order_by('time_submitted').values_list('time_submitted', flat=True).distinct()
     for ts in timestamps:
         ts_epoch = int(time.mktime(ts.timetuple()) * 1000)
         for p in party_list:
