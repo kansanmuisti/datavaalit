@@ -428,8 +428,8 @@ jQuery ->
 		  </p>
 		  
 		  <p>
-		  	Tilanne on viimeksi päivitetty XX.XX.XXXX XX:XX, jolloin 
-		  	ennakkoilmoituksen on jättänyt XX ehdokasta. 
+		  	Tilanne on viimeksi päivitetty <strong>{{ timestamp|date:"d.m.Y H:i" }}</strong>, jolloin 
+		  	ennakkoilmoituksen on jättänyt <strong>{{ num_submitted }}</strong> ehdokasta. 
 		  </p>
 		
 	    </div>

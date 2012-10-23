@@ -84,6 +84,7 @@ def get_party_budget_data(request):
 
 def _calc_prebudget_stats():
     args = {}
+    timestamp = CampaignBudget.objects.order_by('-time_submitted')[0].time_submitted
     election = Election.objects.get(year=2012, type='muni')
     # Find the list of candidates that have submitted the campaign prebudgets
     submitted_list = CampaignBudget.objects.filter(advance=True, candidate__election=election)
@@ -101,20 +102,27 @@ def _calc_prebudget_stats():
         muni.num_submitted += 1
 
     muni_dict = {}
+    total_cands = 0
+    total_submitted = 0
     for muni in muni_list:
         m = {'num_submitted': muni.num_submitted,
              'num_candidates': muni.num_candidates}
         muni_dict[muni.pk] = m
+        total_cands += muni.num_candidates
+        total_submitted += muni.num_submitted
+    args['num_candidates'] = total_cands
+    args['num_submitted'] = total_submitted
     args['muni_json'] = json.dumps(muni_dict, indent=None)
+    args['timestamp'] = timestamp
 
     return args
 
 def show_prebudget_stats(request):
     # The calculation takes a bit of time, so cache the results.
-    args = cache.get('prebudget_stats')
+    args = cache.get('muni_budget_stats')
     if not args:
         args = _calc_prebudget_stats()
-        cache.set('prebudget_stats', args, 3600)
+        cache.set('muni_budget_stats', args, 3600)
     return render_to_response('political/candidate_budgets.html', args,
                               context_instance=RequestContext(request))
 
