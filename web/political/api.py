@@ -34,7 +34,7 @@ class CandidateResource(ModelResource):
     person = fields.ToOneField('political.api.PersonResource', 'person')
     municipality = fields.ToOneField('geo.api.MunicipalityResource',
                                      'municipality', null=True)
-    party = fields.ToOneField('political.api.PartyResource', 'party')
+    party = fields.ToOneField('political.api.PartyResource', 'party', null=True)
 
     def dehydrate(self, bundle):
         person = bundle.obj.person
