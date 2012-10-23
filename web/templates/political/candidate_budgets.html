@@ -225,7 +225,11 @@ render_plots = (party_list) ->
     $(@).css('width', $(@).width())
 
   $("#party-graph").unbind("plothover")
-  $("#party-graph").bind("plothover", (event, pos, item) ->
+  last_position = null
+  last_item = null
+  update_legend_timeout = null
+  update_legend = ->
+    update_legend_timeout = null
     leg_el = $("#party-legend")
     leg_el.find("tr").removeClass("highlight")
 
@@ -233,7 +237,7 @@ render_plots = (party_list) ->
     # find the nearest point, x-wise
     series = dataset[0]
     for i in [0..series.data.length-1]
-      if series.data[i][0] > pos.x
+      if series.data[i][0] > last_position.x
         break
     if i >= series.data.length
       i = series.data.length - 1
@@ -246,11 +250,17 @@ render_plots = (party_list) ->
       text = series.party.code + " " + perc.toFixed(1) + " %"
       el.html(text)
 
-    if not item
+    if not last_item
       return
-    party = cumulative_data[item.seriesIndex].party
-    num_submitted = party.disclosure_data[item.dataIndex][1]
-    $("#party-legend tr").eq(item.seriesIndex).addClass("highlight")
+    party = cumulative_data[last_item.seriesIndex].party
+    num_submitted = party.disclosure_data[last_item.dataIndex][1]
+    $("#party-legend tr").eq(last_item.seriesIndex).addClass("highlight")
+  
+  $("#party-graph").bind("plothover", (event, pos, item) ->
+    last_position = pos
+    last_item = item
+    if not update_legend_timeout
+      update_legend_timeout = setTimeout(update_legend, 50)  
   )
 
 update_plots = (muni_id, muni_name) ->
