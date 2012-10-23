@@ -35,6 +35,13 @@ def candidate_change_request(request):
                               context_instance=RequestContext(request))
 
 def _calc_submission_history(election, muni=None):
+    cache_key = 'party_budget'
+    if muni:
+        cache_key += '_%d' % muni.pk
+    ret = cache.get(cache_key)
+    if ret:
+        return ret
+
     budget_list = CampaignBudget.objects.filter(candidate__election=election)
     if muni:
         budget_list = budget_list.filter(candidate__municipality=muni)
@@ -43,8 +50,11 @@ def _calc_submission_history(election, muni=None):
         d = {'id': p.pk, 'name': p.name, 'code': p.code, 'disclosure_data': []}
         cand_list = Candidate.objects.filter(election=election, party=p)
         if muni:
-            cand_list.filter(municipality=muni)
+            cand_list = cand_list.filter(municipality=muni)
         d['num_candidates'] = cand_list.count()
+        # Filter out parties with no candidates
+        if not d['num_candidates']:
+            continue
         party_list.append(d)
 
     timestamps = budget_list.order_by('time_submitted').values_list('time_submitted', flat=True).distinct()
@@ -54,8 +64,20 @@ def _calc_submission_history(election, muni=None):
             nr_submitted = budget_list.filter(candidate__party=p['id'], time_submitted__lte=ts).count()
             p['disclosure_data'].append((ts_epoch, nr_submitted))
 
-    return json.dumps(party_list, ensure_ascii=False)
+    ret = json.dumps(party_list, ensure_ascii=False)
+    cache.set(cache_key, ret, 3600)
+    return ret
 
+def get_party_budget_data(request):
+    election = Election.objects.get(year=2012, type='muni')
+    muni = None
+    if 'municipality' in request.GET:
+        try:
+            muni = Municipality.objects.get(id=int(request.GET['municipality']))
+        except:
+            raise Http404()
+    ret = _calc_submission_history(election, muni)
+    return HttpResponse(ret, mimetype="application/javascript")
 
 def _calc_prebudget_stats():
     args = {}
@@ -81,7 +103,6 @@ def _calc_prebudget_stats():
              'num_candidates': muni.num_candidates}
         muni_dict[muni.pk] = m
     args['muni_json'] = json.dumps(muni_dict, indent=None)
-    args['party_json'] = _calc_submission_history(election)
 
     return args
 

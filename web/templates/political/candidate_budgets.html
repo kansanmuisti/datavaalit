@@ -73,6 +73,13 @@
 	margin: 40px 0 40px 0;
 }
 
+#party-legend .highlight {
+	background-color: khaki;
+}
+#party-legend td {
+	white-space: nowrap;
+}
+
 </style>
 {% endblock %}
 
@@ -84,6 +91,7 @@
 {% compress js %}
 <script type="text/javascript" src="{% static "js/jquery.flot.js" %}"></script>
 <script type="text/javascript" src="{% static "js/jquery.flot.time.js" %}"></script>
+<script type="text/javascript" src="{% static "js/jquery.flot.crosshair.js" %}"></script>
 {% endcompress %}
 
 {% compress js %}
@@ -93,7 +101,6 @@
 {% compress js %}
 <script type="text/coffeescript">
 muni_dict = {{ muni_json|safe }}
-party_list = {{ party_json|safe }}
 
 $.ajax '/api/v1/municipality/'
   dataType: 'json'
@@ -129,33 +136,147 @@ PARTY_COLORS =
   'PIR': "#888888",
   'SKP': "red",
 
+cumulative_data = []
+num_data = []
 
-flot_data = []
-for p in party_list
-  data = []
-  # Convert data into percentages
-  for dd in p.disclosure_data
-    perc = dd[1] / p.num_candidates
-    data.push([dd[0], perc])
-  # Include only parties that actually have candidates
-  # submitting budgets.
-  last_percent = data[data.length-1][1]
-  if last_percent != 0.0
+render_plots = (party_list) ->
+  cumulative_data = []
+  num_data = []
+  num_ticks = []
+  i = 0
+  for p in party_list
     args =
-      data: data
       label: p.code
+      data: [[i, p.num_candidates]]
     if p.code of PARTY_COLORS
       args.color = PARTY_COLORS[p.code]
-    flot_data.push args
+    num_data.push args
+    num_ticks.push [i, p.code]
+    i++
 
-flot_data = _.sortBy flot_data, (fd) ->
-  return 1 - fd.data[data.length-1][1]
+    data = []
+    # Convert data into percentages
+    for dd in p.disclosure_data
+      perc = dd[1] / p.num_candidates
+      data.push([dd[0], perc])
+    # Include only parties that actually have candidates
+    # submitting budgets.
+    if not data.length
+      continue
+    last_percent = data[data.length-1][1]
+    if last_percent == 0.0
+      continue
+    args =
+      data: data
+      label: p.code + " " + (last_percent*100).toFixed(1) + " %"
+    if p.code of PARTY_COLORS
+      args.color = PARTY_COLORS[p.code]
+    args.party = p
+    cumulative_data.push args 
 
+  console.log "data set!"
+  console.log cumulative_data
+  console.log cumulative_data.length
+  if not cumulative_data.length
+    $("#party-graph").unbind("plothover")
+    $("#party-graph").html("<h4>Ei ennakkoilmoituksia.</h4>")
+    $("#party-legend").html("")
+  else
+    # Sort based on percentage
+    cumulative_data = _.sortBy cumulative_data, (fd) ->
+      return 1 - fd.data[data.length-1][1]
+    plot = $.plot $("#party-graph"), cumulative_data,
+      series:
+        lines:
+          show: true
+          lineWidth: 3
+      crosshair:
+        mode: "x"
+      xaxis:
+        mode: "time"
+        timeformat: "%d.%m."
+        show: true
+      yaxis:
+        tickFormatter: (num, obj) ->
+          return "" + (num * 100).toFixed(0) + " %"
+        show: true
+        min: 0
+        max: 1
+      grid:
+        hoverable: true
+        borderWidth: 0
+      legend:
+        container: $("#party-legend")
+
+  console.log num_data
+  $.plot $("#candidate-graph"), num_data,
+    series:
+      bars:
+        show: true
+        align: "center"
+    grid:
+      borderWidth: 0
+    legend:
+      show: false
+      #container: $("#candidate-legend")
+    xaxis:
+      ticks: num_ticks
+
+  $("#party-legend .legendLabel").each ->
+    $(@).css('width', $(@).width())
+
+  $("#party-graph").unbind("plothover")
+  $("#party-graph").bind("plothover", (event, pos, item) ->
+    leg_el = $("#party-legend")
+    leg_el.find("tr").removeClass("highlight")
+
+    console.log cumulative_data
+    dataset = cumulative_data
+    # find the nearest point, x-wise
+    series = dataset[0]
+    for i in [0..series.data.length-1]
+      if series.data[i][0] > pos.x
+        break
+    if i >= series.data.length
+      i = series.data.length - 1
+    nearest_data = i
+
+    for i in [0..dataset.length-1]
+      series = dataset[i]
+      el = leg_el.find(".legendLabel").eq(i)
+      perc = series.data[nearest_data][1] * 100
+      text = series.party.code + " " + perc.toFixed(1) + " %"
+      el.html(text)
+
+    if not item
+      return
+    party = cumulative_data[item.seriesIndex].party
+    num_submitted = party.disclosure_data[item.dataIndex][1]
+    $("#party-legend tr").eq(item.seriesIndex).addClass("highlight")
+  )
+
+update_plots = (muni_id, muni_name) ->
+  $(".muni-selection").html(muni_name)
+  if muni_id
+    data = {municipality: muni_id}
+  else
+    data = {}
+  $.ajax '/candidates/fetch-party-budget/'
+    dataType: 'json'
+    data: data
+    error: (args1, args2) ->
+      alert "{% trans "Communication with server failed" %}"
+    success: (data) ->
+      party_list = data
+      render_plots party_list
+
+update_plots(0, "koko maa")
+
+stored_geojson = null
 handle_geojson = (json) ->
-  alert "Bug!"
+  stored_geojson = json
 
 init_map = ->
-
   map = L.map('map',
     minZoom: 5,
     maxZoom: 6,
@@ -173,7 +294,6 @@ init_map = ->
   #  key: 'BC9A493B41014CAABB98F0471D759707',
   #  styleId: 22677
   #).addTo(map);
-  
 
   # control that shows state info on hover
   info = L.control();
@@ -183,7 +303,6 @@ init_map = ->
     @.update();
     @._div;
   info.update = (props) ->
-    console.log props
     s = ''
     if props
       perc = props.num_submitted / props.num_candidates
@@ -234,10 +353,11 @@ init_map = ->
     geojson.resetStyle(e.target)
     info.update()
 
-  zoom_to_feature = (e) ->
-    map.fitBounds(e.target.getBounds())
-
   on_each_feature = (feature, layer) ->
+    zoom_to_feature = (e) ->
+      update_plots(feature.id, feature.properties.name)
+      #map.fitBounds(e.target.getBounds())
+
     layer.on
       mouseover: highlight_feature,
       mouseout: reset_highlight,
@@ -265,7 +385,6 @@ init_map = ->
 
   geojson = {}
   handle_geojson = (json_data) ->
-    console.log "handle_geojson"
     geojson = L.geoJson(json_data,
       style: style,
       onEachFeature: on_each_feature
@@ -277,47 +396,19 @@ init_map = ->
     bounds["_southWest"]["lng"] = bounds["_southWest"]["lng"] - offset
     bounds["_northEast"]["lat"] = bounds["_northEast"]["lat"] + offset
     bounds["_northEast"]["lng"] = bounds["_northEast"]["lng"] + offset
-    console.log bounds
     map.fitBounds(bounds).setMaxBounds(bounds)
     map.panTo([66.0, 27.8])
+  if stored_geojson
+    handle_geojson(stored_geojson)
  
 # The code below is run after the HTML document has finished loading.
 jQuery ->
-  $.plot $("#party-graph"), flot_data,
-    series:
-      lines:
-        show: true
-    xaxis:
-      mode: "time"
-      timeformat: "%d.%m."
-    yaxis:
-      tickFormatter: (num, obj) ->
-        return "" + (num * 100).toFixed(0) + " %"
-    grid:
-      hoverable: true
-      borderWidth: 0
-      
-    legend:
-      container: $("#party-legend")
-      
-jQuery ->
-  $.plot $("#candidate-graph"), flot_data,
-    series:
-      bars:
-        show: true
-    grid:
-      borderWidth: 0
-      
-    legend:
-      container: $("#candidate-legend")
-      
   init_map()
 </script>
 {% endcompress %}
 {% endblock %}
 
 {% block body %}
-  	
   	<div class="row-fluid">
   		<div class=span12>
   		
@@ -335,7 +426,7 @@ jQuery ->
 		  <p>
 		  	Ennakkoilmoitukset on koostettu hakemalla <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia/raportit/Tietoaineistot.html.stx">
 		    VRV:n julkaisemia tietoaineistoja</a> automaattisesti ja 
-		    päivittämällä tiedot datavaalien tietokantaan.
+		    päivittämällä tiedot Datavaalien tietokantaan.
 		  </p>
 		  
 		  <p>
@@ -355,7 +446,7 @@ jQuery ->
 		  
 		  <div class="span6">
 			  <div style="position: relative; margin: 10px 0 10px 0;">
-			  	<h5>Ennakkoilmoitusten kertyminen</h5>
+			  	<h5>Ennakkoilmoitusten kertyminen, <span class="muni-selection"></span></h5>
 			    <div id="party-graph"></div>
 			    <div id="party-legend"></div>
 			  </div>
@@ -363,7 +454,7 @@ jQuery ->
 		  
 		  <div class="span6">
 			  <div style="position: relative">
-			  	<h5>Ehdokkaita puolueittain</h5>
+			  	<h5>Ehdokkaiden lukumäärä puolueittain, <span class="muni-selection"></span></h5>
 			    <div id="candidate-graph"></div>
 			    <div id="candidate-legend"></div>
 			  </div>
