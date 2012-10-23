@@ -87,6 +87,9 @@
 {% compress js %}
 <script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
 {% endcompress %}
+{% compress js %}
+<script type="text/javascript" src="{% static "js/spin.min.js" %}"></script>
+{% endcompress %}
 
 {% compress js %}
 <script type="text/javascript" src="{% static "js/jquery.flot.js" %}"></script>
@@ -264,7 +267,8 @@ render_plots = (party_list) ->
   )
 
 update_plots = (muni_id, muni_name) ->
-  $(".muni-selection").html(muni_name)
+  $("#party-graph").html('')
+  spinner = new Spinner().spin($("#party-graph")[0])
   if muni_id
     data = {municipality: muni_id}
   else
@@ -275,7 +279,10 @@ update_plots = (muni_id, muni_name) ->
     error: (args1, args2) ->
       alert "{% trans "Communication with server failed" %}"
     success: (data) ->
+      spinner.stop()
+      delete spinner
       party_list = data
+      $(".muni-selection").html(muni_name)
       render_plots party_list
 
 update_plots(0, "koko maa")
