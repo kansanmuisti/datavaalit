@@ -7,10 +7,41 @@
 {% block extra_style %}
 <link rel="stylesheet" href="http://leaflet.cloudmade.com/dist/leaflet.css" />
 <style>
+
+
 #map {
-	width: 500px;
+	width: 450px;
 	height: 650px;
+	
+	margin: 10px 0 40px;
 }
+
+#party-graph {
+	width: 400px; 
+	height: 300px;
+}
+
+#party-legend {
+	position: absolute; 
+	left: 400px; 
+	top: 50px;
+}
+
+#candidate-graph {
+	width: 400px; 
+	height: 300px;
+}
+
+#candidate-legend {
+	position: absolute; 
+	left: 400px; 
+	top: 50px;
+}
+
+.leaflet-container {
+    background: none repeat scroll 0 0 #F5F5F5;
+}
+
 .info {
 	padding: 6px 8px;
 	font: 14px/16px Arial, Helvetica, sans-serif;
@@ -18,7 +49,9 @@
 	background: rgba(255,255,255,0.8);
 	box-shadow: 0 0 15px rgba(0,0,0,0.2);
 	border-radius: 5px;
+	right: 0px;
 }
+
 .info h4 {
 	margin: 0 0 5px;
 	color: #777;
@@ -35,6 +68,11 @@
 	margin-right: 8px;
 	opacity: 0.7;
 }
+
+.graph-container {
+	margin: 40px 0 40px 0;
+}
+
 </style>
 {% endblock %}
 
@@ -117,13 +155,10 @@ handle_geojson = (json) ->
   alert "Bug!"
 
 init_map = ->
-  south_west = new L.LatLng(61.5, 23.00)
-  north_east = new L.LatLng(68.50, 29.00)
-  bounds = new L.LatLngBounds(south_west, north_east)
 
   map = L.map('map',
     minZoom: 5,
-    maxZoom: 7,
+    maxZoom: 6,
     # Some basic options to keep the map still and prevent
     # the user from zooming and such.
     scrollWheelZoom: true,
@@ -131,13 +166,14 @@ init_map = ->
     doubleClickZoom: true,
     zoomControl: true,
     dragging: true
-  ).fitBounds(bounds);
+  );
 
-  cloudmade = L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png',
-    attribution: 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
-    key: 'BC9A493B41014CAABB98F0471D759707',
-    styleId: 22677
-  ).addTo(map);
+  #cloudmade = L.tileLayer('http://{s}.tile.cloudmade.com/{key}/{styleId}/256/{z}/{x}/{y}.png',
+  #  attribution: 'Map data &copy; 2011 OpenStreetMap contributors, Imagery &copy; 2011 CloudMade',
+  #  key: 'BC9A493B41014CAABB98F0471D759707',
+  #  styleId: 22677
+  #).addTo(map);
+  
 
   # control that shows state info on hover
   info = L.control();
@@ -148,7 +184,7 @@ init_map = ->
     @._div;
   info.update = (props) ->
     console.log props
-    s = '<h4>Vaalirahoituksen ennakkoilmoituksen</h4><h4>tehneiden ehdokkaiden osuus</h4>'
+    s = ''
     if props
       perc = props.num_submitted / props.num_candidates
       s += '<b>' + props.name + '</b> (' + props.num_candidates + ' ehdokasta)' + '<br />' + (perc * 100).toFixed(0) + ' % tehnyt ennakkoilmoituksen'
@@ -234,7 +270,17 @@ init_map = ->
       style: style,
       onEachFeature: on_each_feature
     ).addTo(map)
-
+    bounds = geojson.getBounds();
+    # Adjust the bounds manually
+    offset = 6
+    bounds["_southWest"]["lat"] = bounds["_southWest"]["lat"] - offset
+    bounds["_southWest"]["lng"] = bounds["_southWest"]["lng"] - offset
+    bounds["_northEast"]["lat"] = bounds["_northEast"]["lat"] + offset
+    bounds["_northEast"]["lng"] = bounds["_northEast"]["lng"] + offset
+    console.log bounds
+    map.fitBounds(bounds).setMaxBounds(bounds)
+    map.panTo([66.0, 27.8])
+ 
 # The code below is run after the HTML document has finished loading.
 jQuery ->
   $.plot $("#party-graph"), flot_data,
@@ -249,19 +295,130 @@ jQuery ->
         return "" + (num * 100).toFixed(0) + " %"
     grid:
       hoverable: true
+      borderWidth: 0
+      
     legend:
       container: $("#party-legend")
+      
+jQuery ->
+  $.plot $("#candidate-graph"), flot_data,
+    series:
+      bars:
+        show: true
+    grid:
+      borderWidth: 0
+      
+    legend:
+      container: $("#candidate-legend")
+      
   init_map()
 </script>
 {% endcompress %}
 {% endblock %}
 
 {% block body %}
-  <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
-  <div style="position: relative">
-    <div id="party-graph" style="width: 600px; height: 300px;"></div>
-    <div id="party-legend" style="position: absolute; left: 600px; top: 20px"></div>
+  	
+  	<div class="row-fluid">
+  		<div class=span12>
+  		
+  		  <h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
+  		
+  		  <p>
+		  	Tämän sivun kuvaajat perustuvat <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia.html">
+		  	Puolue- ja vaalirahoitusvalvonnan</a> rekisteröimiin vaalirahoituksen
+		  	ennakkoilmoituksiin. Ennakkoilmoiksen tekeminen on vapaaehtoista ja 
+		  	varsinaisen vaalirahoitusilmoituksen tekevät vaalien tuloksen 
+		  	vahvistamisen jälkeen valitut ja vaalien tulosta vahvistettaessa 
+		  	varaedustajaksi määrätyt. 
+		  </p>
+		  
+		  <p>
+		  	Ennakkoilmoitukset on koostettu hakemalla <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia/raportit/Tietoaineistot.html.stx">
+		    VRV:n julkaisemia tietoaineistoja</a> automaattisesti ja 
+		    päivittämällä tiedot datavaalien tietokantaan.
+		  </p>
+		  
+		  <p>
+		  	Tilanne on viimeksi päivitetty XX.XX.XXXX XX:XX, jolloin 
+		  	ennakkoilmoituksen on jättänyt XX ehdokasta. 
+		  </p>
+		
+	    </div>
+	 </div>
+		 
+		
+	 	<div class="row-fluid graph-container">
+	 	  <div class="span6">
+	 	  	<h5>Ennakkoilmoittaneiden osuus kunnittain</h5>
+	 		<div id="map"></div>
+		  </div>
+		  
+		  <div class="span6">
+			  <div style="position: relative; margin: 10px 0 10px 0;">
+			  	<h5>Ennakkoilmoitusten kertyminen</h5>
+			    <div id="party-graph"></div>
+			    <div id="party-legend"></div>
+			  </div>
+		  </div>
+		  
+		  <div class="span6">
+			  <div style="position: relative">
+			  	<h5>Ehdokkaita puolueittain</h5>
+			    <div id="candidate-graph"></div>
+			    <div id="candidate-legend"></div>
+			  </div>
+		  </div>
+		</div>
+  
+  <div class="row-fluid">
+  	<div class="span12">
+	  		
+	  	<h4>Ennakkoilmoituksen tehneiden ehdokkaiden osuus kunnittain</h4>  	
+	  	
+	  	<p>
+	  		Vasemmalla oleva kartta näyttää prosentein kuink suuri osuus 
+	  		kunkin kunnan ehdokkaista on tehnyt vaalirahoituksen 
+	  		ennakkoilmoituksen. Viemällä osoittimen kunnan päälle päivittyvät
+	  		oikealla olevat kuvaajat kyseisen kunnan tiedoilla. 
+	  	</p>
+	  	
+	  	<p>
+	  		Jotkin kunnat puuttuvat kokonaan kartalta, sillä niissä ei ole 
+	  		virallisesti yhtään ehdokasta usein tulevien kuntaliitosten takia. 
+	  		Esimerkiksi <a href="http://www.kerimaki.fi/index.php?tid=310">Kerimäen kunnan verkkosivuilla</a> kerrotaan: 
+	  		
+	  		<blockquote>
+	  			Vuoden 2012 kunnallisvaalit toimitetaan uutta kuntajakoa 
+	  			noudattaen ja siten äänioikeusrekisteriin on myös Kerimäen ja 
+	  			Punkaharjun kunnan alueella asuvien kotikunnaksi merkitty 
+	  			Savonlinna.
+	  		</blockquote>
+	  		
+	  	</p>
+	  	
+	  	<hr />
+	  	
+		<h4>Milloin ehdokkaat ovat ilmoituksia jättäneet?</h4>
+		  
+		<p>
+	  		Oikealla ylhäällä oleva kuvaaja kertoo, kuinka ennakkoilmoituksia 
+	  		on kertynyt eri puolueiden ehdokkailta kunnallisvaalien lähestyessä.
+	  		Ilmoituksia alettiin seurata 7.10.2012 ja seurantaa jatketaan
+	  		vaaleihin asti. Vaalien jälkeen sivulle päivitetään valituksi 
+	  		tulleiden vaalirahoitustiedot.
+		</p>
+		
+		<hr />
+		
+		<h4>Kuinka paljon ehdokkaita on puolueittain?</h4>
+		  
+		<p>
+	  		Oikealla alhaalla oleva kuvaaja näyttää kuinka paljon ehdokkaita
+	  		eri puolueilla on maanlaajuisesti ja kunnittain. 
+		</p>
+	  	
+	
+	</div>
   </div>
-  <div id="map"></div>
 {% endblock %}
 
