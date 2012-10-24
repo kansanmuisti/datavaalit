@@ -323,7 +323,7 @@ init_map = ->
       perc = props.num_submitted / props.num_candidates
       s += '<b>' + props.name + '</b> (' + props.num_candidates + ' ehdokasta)' + '<br />' + (perc * 100).toFixed(0) + ' % tehnyt ennakkoilmoituksen'
     else
-      s += 'Vie osoitin kunnan päälle'
+      s += '<p>Vie osoitin kunnan päälle<br /><small>Klikkaa kuntaa päivittääksesi kuvaajat oikealla</small></p>'
     @._div.innerHTML = s
   info.addTo(map);
   # get color depending on population density value
@@ -491,9 +491,9 @@ jQuery ->
 	  	<h4>Ennakkoilmoituksen tehneiden ehdokkaiden osuus kunnittain</h4>  	
 	  	
 	  	<p>
-	  		Vasemmalla oleva kartta näyttää prosentein kuink suuri osuus 
+	  		Vasemmalla oleva kartta näyttää prosentein kuinka suuri osuus 
 	  		kunkin kunnan ehdokkaista on tehnyt vaalirahoituksen 
-	  		ennakkoilmoituksen. Viemällä osoittimen kunnan päälle päivittyvät
+	  		ennakkoilmoituksen. Klikkaamalla haluttua kuntaa päivittyvät
 	  		oikealla olevat kuvaajat kyseisen kunnan tiedoilla. 
 	  	    Jotkin kunnat puuttuvat kokonaan kartalta, sillä niissä ei ole 
 	  		virallisesti yhtään ehdokasta usein tulevien kuntaliitosten takia. 
