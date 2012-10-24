@@ -57,7 +57,16 @@
             <div class="nav-collapse">
                 <ul class="nav">{% spaceless %}
                   <li><a href="/community/">{% trans "Community" %}</a></li>
-                  <li><a href="/resources/">{% trans "Resources" %}</a></li>
+                  <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                      {% trans "Resources" %} <b class="caret"></b>
+                    </a>
+                    <ul class="dropdown-menu">
+                      <li><a href="/resources/">{% trans "General" %}</a></li>
+                      <li><a href="/resources/api/">{% trans "API" %}</a></li>
+                      <li><a href="/resources/catalogue/">{% trans "Data catalogue" %}</a></li>
+                      <li><a href="/resources/clean-data/">{% trans "Packaging" %}</a></li>
+                    </ul>
                   <li class="dropdown">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                       {% trans "Participate" %} <b class="caret"></b>
