@@ -61,6 +61,7 @@ class Candidate(models.Model):
     person = models.ForeignKey(Person)
     number = models.PositiveIntegerField()
     profession = models.CharField(max_length=100)
+    picture = models.URLField(null=True)
     party = models.ForeignKey(Party, null=True)
     party_code = models.CharField(max_length=8)
     election = models.ForeignKey(Election, db_index=True)

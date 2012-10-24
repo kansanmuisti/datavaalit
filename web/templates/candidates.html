@@ -41,6 +41,12 @@ jQuery ->
 
   columns = [
     {
+      name: "{% trans "Picture" %}"
+      field: "picture"
+      width: "1em"
+      type: "img"
+      class: "profile-picture"
+    }, {
       name: "{% trans "Number" %}"
       field: "number"
       width: "6em"
@@ -64,13 +70,23 @@ jQuery ->
     for obj in objects
       row = []
       for col in columns
-        row.push(obj[col.field])
+        val = obj[col.field]
+        if col.type == 'img'
+          if val
+            row.push("<img src='#{ val }' class='#{ col.class }'>")
+          else
+            row.push("")
+        else
+          row.push(val)
       rows.push(row)
     cols = []
     for col in columns
       attr = {sTitle: col.name}
       if 'width' of col
         attr.sWidth = col.width
+      if col.type == 'img'
+        attr.bSortable = false
+        attr.bSearchable = false
       cols.push(attr)
     args = {
       sDom: "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>"

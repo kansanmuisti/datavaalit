@@ -469,6 +469,11 @@ class DjangoBackend(Backend):
                     candidate.party_code = c['party']
                     candidate.party = self.party_dict.get(c['party'], None)
                 candidate.save()
+
+            if 'picture' in c:
+                candidate.picture = c['picture']
+                candidate.save()
+
             if 'social' in c:
                 social = c['social']
                 if 'fb_feed' in social:
