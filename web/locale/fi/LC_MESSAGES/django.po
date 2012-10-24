@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-10-14 22:09+0300\n"
+"POT-Creation-Date: 2012-10-25 02:39+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -50,28 +50,34 @@ msgstr "Kirjaudu ulos"
 msgid "Candidates"
 msgstr "Ehdokkaat"
 
-#: templates/candidates.html:44
+#: templates/candidates.html:44 templates/political/candidate_budgets.html:380
+msgid "Picture"
+msgstr "Kuva"
+
+#: templates/candidates.html:50 templates/political/candidate_budgets.html:386
 msgid "Number"
 msgstr "Numero"
 
-#: templates/candidates.html:48 templates/profiles/_profile_info.html:3
+#: templates/candidates.html:54 templates/political/candidate_budgets.html:390
+#: templates/profiles/_profile_info.html:3
 msgid "Name"
 msgstr "Nimi"
 
-#: templates/candidates.html:51
+#: templates/candidates.html:57 templates/political/candidate_budgets.html:393
 msgid "Party"
 msgstr "Puolue"
 
-#: templates/candidates.html:55
+#: templates/candidates.html:61
 msgid "Profession"
 msgstr "Ammatti"
 
-#: templates/candidates.html:135
+#: templates/candidates.html:151
 msgid "Candidates for municipality election 2012"
 msgstr "Kunnallisvaaliehdokkaat 2012"
 
-#: templates/candidates.html:137
-#: templates/political/candidate_social_feeds.html:309
+#: templates/candidates.html:153
+#: templates/political/candidate_budgets.html:666
+#: templates/political/candidate_social_feeds.html:393
 msgid "Choose a municipality"
 msgstr "Valitse kunta"
 
@@ -83,31 +89,41 @@ msgstr "Kuntadata"
 msgid "Front page"
 msgstr "Etusivu"
 
-#: templates/site_base.html:48
+#: templates/site_base.html:59
 msgid "Community"
 msgstr "Yhteisö"
 
-#: templates/site_base.html:49
+#: templates/site_base.html:60
 msgid "Resources"
 msgstr "Resurssit"
 
-#: templates/site_base.html:52
+#: templates/site_base.html:63
 msgid "Participate"
 msgstr "Osallistu"
 
-#: templates/site_base.html:55
+#: templates/site_base.html:66
 msgid "General"
 msgstr "Yleistä"
 
-#: templates/site_base.html:56
+#: templates/site_base.html:67
 msgid "Scrapers"
 msgstr "Ruudunraapijat"
 
-#: templates/political/candidate_social_feeds.html:182
+#: templates/political/candidate_budgets.html:222
+#: templates/political/candidate_budgets.html:448
+#: templates/political/candidate_change_request.html:34
+msgid "Communication with server failed"
+msgstr ""
+
+#: templates/political/candidate_budgets.html:397
+msgid "Budget submitted"
+msgstr "Ilmoitus jätetty"
+
+#: templates/political/candidate_social_feeds.html:190
 msgid "No social media activity found."
 msgstr "Päivityksiä ei löytynyt."
 
-#: templates/political/candidate_social_feeds.html:312
+#: templates/political/candidate_social_feeds.html:396
 msgid "Choose a party"
 msgstr "Valitse puolue"
 
