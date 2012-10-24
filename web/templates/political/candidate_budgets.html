@@ -86,6 +86,9 @@
 {% block extra_script %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
+<script type="text/javascript" src="{% static "js/backbone.js" %}"></script>
+<script type="text/javascript" src="{% static "js/backbone-tastypie.js" %}"></script>
+<script type="text/javascript" src="{% static "js/jquery.ba-bbq.js" %}"></script>
 {% endcompress %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/spin.min.js" %}"></script>
@@ -104,6 +107,33 @@
 {% compress js %}
 <script type="text/coffeescript">
 muni_dict = {{ muni_json|safe }}
+
+api_fetch = (type, opts) ->
+  url = "/api/v1/#{ type }/?format=json"
+  if opts.limit
+    url += "&limit=" + opts.limit
+  else
+    url += "&limit=100"
+  if opts.search_args
+    url += "&" + opts.search_args
+  if opts.error_callback
+    error_cb = opts.error_callback
+  else
+    error_cb = ->
+      alert "Communication with server failed"
+
+  objs = []
+  fetch_objs = (url) ->
+    $.ajax url,
+      dataType: "json"
+      success: (data) ->
+        objs = objs.concat data.objects
+        if data.meta.next && opts.all
+          fetch_objs data.meta.next
+        else
+          opts.callback objs
+      error: error_cb
+  fetch_objs url
 
 $.ajax '/api/v1/municipality/'
   dataType: 'json'
@@ -267,11 +297,19 @@ render_plots = (party_list) ->
       update_legend_timeout = setTimeout(update_legend, 50)  
   )
 
-update_plots = (muni_id, muni_name) ->
+fetch_candidate_budgets = (muni_id) ->
+  return 0
+
+render_municipality = (muni_id) ->
+  if muni_id == 0
+    muni_name = "koko maa"
+  else
+    muni_name = muni_dict[muni_id].name
   $("#party-graph").html('')
   spinner = new Spinner().spin($("#party-graph")[0])
   if muni_id
     data = {municipality: muni_id}
+    fetch_candidate_budgets(muni_id)
   else
     data = {}
   $.ajax '/candidates/fetch-party-budget/'
@@ -285,7 +323,11 @@ update_plots = (muni_id, muni_name) ->
       $(".muni-selection").html(muni_name)
       render_plots party_list
 
-update_plots(0, "koko maa")
+set_municipality = (muni_name) ->
+  hash_str = "#"
+  if muni_name
+    hash_str += "?municipality=" + muni_dict[muni_name].slug
+  $.bbq.pushState hash_str
 
 stored_geojson = null
 handle_geojson = (json) ->
@@ -370,7 +412,7 @@ init_map = ->
 
   on_each_feature = (feature, layer) ->
     zoom_to_feature = (e) ->
-      update_plots(feature.id, feature.properties.name)
+      set_municipality(feature.id)
       #map.fitBounds(e.target.getBounds())
 
     layer.on
@@ -415,10 +457,27 @@ init_map = ->
     map.panTo([66.0, 27.8])
   if stored_geojson
     handle_geojson(stored_geojson)
- 
+
+$(window).bind('hashchange', ->
+  hash = window.location.hash
+  if hash.substring(0, 2) == "#?"
+    hash = hash.substring(2)
+  params = $.deparam(hash)
+  muni_name = params.municipality
+  muni_id = 0
+  if muni_name
+    muni_name = muni_name.toLowerCase()
+    for id, muni of muni_dict
+      if muni.slug == muni_name
+        muni_id = id
+        break
+  render_municipality(muni_id)
+)
+
 # The code below is run after the HTML document has finished loading.
 jQuery ->
   init_map()
+  $(window).trigger('hashchange')
 </script>
 {% endcompress %}
 {% endblock %}
