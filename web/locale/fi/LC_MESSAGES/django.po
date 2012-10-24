@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-10-14 22:09+0300\n"
+"POT-Creation-Date: 2012-10-24 20:47+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -71,7 +71,7 @@ msgid "Candidates for municipality election 2012"
 msgstr "Kunnallisvaaliehdokkaat 2012"
 
 #: templates/candidates.html:137
-#: templates/political/candidate_social_feeds.html:309
+#: templates/political/candidate_social_feeds.html:393
 msgid "Choose a municipality"
 msgstr "Valitse kunta"
 
@@ -83,31 +83,49 @@ msgstr "Kuntadata"
 msgid "Front page"
 msgstr "Etusivu"
 
-#: templates/site_base.html:48
+#: templates/site_base.html:59
 msgid "Community"
 msgstr "Yhteisö"
 
-#: templates/site_base.html:49
+#: templates/site_base.html:62
 msgid "Resources"
 msgstr "Resurssit"
 
-#: templates/site_base.html:52
-msgid "Participate"
-msgstr "Osallistu"
-
-#: templates/site_base.html:55
+#: templates/site_base.html:65 templates/site_base.html.py:75
 msgid "General"
 msgstr "Yleistä"
 
-#: templates/site_base.html:56
+#: templates/site_base.html:66
+msgid "API"
+msgstr "API"
+
+#: templates/site_base.html:67
+msgid "Data catalogue"
+msgstr "Datakatalogi"
+
+#: templates/site_base.html:68
+msgid "Packaging"
+msgstr "Datan paketointi"
+
+#: templates/site_base.html:72
+msgid "Participate"
+msgstr "Osallistu"
+
+#: templates/site_base.html:76
 msgid "Scrapers"
 msgstr "Ruudunraapijat"
 
-#: templates/political/candidate_social_feeds.html:182
+#: templates/political/candidate_budgets.html:114
+#: templates/political/candidate_budgets.html:281
+#: templates/political/candidate_change_request.html:34
+msgid "Communication with server failed"
+msgstr ""
+
+#: templates/political/candidate_social_feeds.html:190
 msgid "No social media activity found."
 msgstr "Päivityksiä ei löytynyt."
 
-#: templates/political/candidate_social_feeds.html:312
+#: templates/political/candidate_social_feeds.html:396
 msgid "Choose a party"
 msgstr "Valitse puolue"
 
