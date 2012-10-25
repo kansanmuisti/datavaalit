@@ -147,5 +147,5 @@ class CampaignExpense(models.Model):
         unique_together = (('budget', 'type'),)
 
     def __unicode__(self):
-        return "%s / %s: %s (added %s)" % (self.budget.candidate, self.type.name,
+        return u"%s / %s: %s (added %s)" % (self.budget.candidate, self.type.name,
                         self.sum, self.time_submitted)
