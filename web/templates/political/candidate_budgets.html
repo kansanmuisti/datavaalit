@@ -9,6 +9,20 @@
 <link rel="stylesheet" href="http://leaflet.cloudmade.com/dist/leaflet.css" />
 
 <style>
+#chooser-container {
+	margin: 30px 0 30px 0;
+}
+
+.info-icon {
+	color: #6495ED;
+	font-size: 20px;
+	margin-left: 10px;
+}
+
+#candidate-budgets {
+	margin: 30px 0 30px 0;
+}
+
 #map {
 	width: 450px;
 	height: 650px;
@@ -122,6 +136,22 @@
 {% compress js %}
 <script type="text/javascript" src="{% static "js/moment.js" %}"></script>
 <script type="text/javascript" src="{% static "js/moment-fi.js" %}"></script>
+{% endcompress %}
+
+{% compress js %}
+<script type="text/javascript" src="{% static "bootstrap/js/bootstrap-popover.js" %}"></script>
+{% endcompress %}
+
+{% compress js %}
+<script type="text/javascript">  
+$(function ()  { 
+		$("#chooser-info").popover();
+		$("#map-info").popover();  
+		$("#muni-perc-info").popover();
+		$("#muni-cand-info").popover();
+		  
+	});  
+</script>  
 {% endcompress %}
 
 {% compress js %}
@@ -540,7 +570,7 @@ init_map = ->
       perc = props.num_submitted / props.num_candidates
       s += '<b>' + props.name + '</b> (' + props.num_candidates + ' ehdokasta)' + '<br />' + (perc * 100).toFixed(0) + ' % tehnyt ennakkoilmoituksen'
     else
-      s += '<p>Vie osoitin kunnan päälle<br /><small>Klikkaa kuntaa päivittääksesi kuvaajat oikealla</small></p>'
+      s += '<p>Vie osoitin kunnan päälle<br /><small>Klikkaa kuntaa päivittääksesi sivun tiedot</small></p>'
     @._div.innerHTML = s
   info.addTo(map);
   # get color depending on population density value
@@ -675,119 +705,93 @@ jQuery ->
 {% endblock %}
 
 {% block body %}
-  	<div class="row-fluid">
-  		<div class=span12>
-  		
-  		  <div class="hero-unit">
-  		  	<h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
-  		  	<p>
-  		  		Kunnallisvaaliehdokkaiden on mahdollista tehdä ennakkoilmoitus 
-  		  		vaalikampanjansa rahoituksesta jo ennen mahdollista valituksi 
-  		  		tulemista. Kuinka moni on valmis avaamaan vaalirahoituksensa 
-  		  		etukäteen ja kuinka ennakkoilmoituksia on täytetty eri 
-  		  		puolueissa?
-  		    </p>
-  		  </div>
-  		
-  		  <p>
-		  	Tämän sivun kuvaajat perustuvat <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia.html">
-		  	Puolue- ja vaalirahoitusvalvonnan</a> rekisteröimiin vaalirahoituksen
-		  	ennakkoilmoituksiin. Ennakkoilmoiksen tekeminen on vapaaehtoista ja 
-		  	varsinaisen vaalirahoitusilmoituksen tekevät vaalien tuloksen 
-		  	vahvistamisen jälkeen valitut ja vaalien tulosta vahvistettaessa 
-		  	varaedustajaksi määrätyt. 
-		  </p>
-		  
-		  <p>
-		  	Ennakkoilmoitukset on koostettu hakemalla <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia/raportit/Tietoaineistot.html.stx">
-		    VRV:n julkaisemia tietoaineistoja</a> automaattisesti ja 
-		    päivittämällä tiedot Datavaalien tietokantaan.
-		  </p>
-		  
-		  <p>
-		  	Tilanne on viimeksi päivitetty <strong>{{ timestamp|date:"d.m.Y H:i" }}</strong>, jolloin 
-		  	ennakkoilmoituksen on jättänyt <strong>{{ num_submitted }}</strong> ehdokasta. 
-		  </p>
-		
-	    </div>
-	 </div>
-         <div id="chooser-container">
-           <select data-placeholder="{% trans "Choose a municipality" %}" id="municipality-chooser">
-             <option value=""></option>
-           </select>
-         </select>
-	 	<div class="row-fluid graph-container">
-	 	  <div class="span6">
-	 	  	<h5>Ennakkoilmoittaneiden osuus kunnittain</h5>
-	 		<div id="map"></div>
-		  </div>
-		  <div class="span6">
-			  <div style="position: relative; margin: 10px 0 10px 0;">
-			  	<h5>Ennakkoilmoitusten kertyminen, <span class="muni-selection"></span></h5>
-			    <div id="party-graph"></div>
-			    <div id="party-legend"></div>
-			  </div>
-		  </div>
-		  <div class="span6">
-			  <div style="position: relative">
-			  	<h5>Ehdokkaiden lukumäärä puolueittain, <span class="muni-selection"></span></h5>
-			    <div id="candidate-graph"></div>
-			    <div id="candidate-legend"></div>
-			  </div>
-		  </div>
+<div class="row-fluid">
+	<div class=span12>
+
+		<div class="lead">
+			<h1 style="font-size: 26px;">Kunnallisvaaliehdokkaiden 2012 ennakkorahoitusilmoitukset</h1>
+			<p>
+				Kunnallisvaaliehdokkaiden on mahdollista tehdä ennakkoilmoitus
+				vaalikampanjansa rahoituksesta jo ennen mahdollista valituksi
+				tulemista. Kuinka moni on valmis avaamaan vaalirahoituksensa
+				etukäteen ja kuinka ennakkoilmoituksia on täytetty eri
+				puolueissa?
+			</p>
 		</div>
-  <!-- <button id="show-candidates" class="btn btn-primary">Näytä ehdokkaat</button> -->
-  <div id="candidate-budgets">
-  </div>
-  <hr>
-  <div class="row-fluid">
-	  
-	  <div class="span4">		
-	  	<h4>Ennakkoilmoituksen tehneiden ehdokkaiden osuus kunnittain</h4>  	
-	  	
-	  	<p>
-	  		Vasemmalla oleva kartta näyttää prosentein kuinka suuri osuus 
-	  		kunkin kunnan ehdokkaista on tehnyt vaalirahoituksen 
-	  		ennakkoilmoituksen. Klikkaamalla haluttua kuntaa päivittyvät
-	  		oikealla olevat kuvaajat kyseisen kunnan tiedoilla. 
-	  	    Jotkin kunnat puuttuvat kokonaan kartalta, sillä niissä ei ole 
-	  		virallisesti yhtään ehdokasta usein tulevien kuntaliitosten takia. 
-	  	</p>
-	 </div> 	
-	 
-	 <div class="span4"> 	
-		<h4>Milloin ehdokkaat ovat ilmoituksia jättäneet?</h4>
-		  
+
 		<p>
-	  		Oikealla ylhäällä oleva kuvaaja kertoo, kuinka ennakkoilmoituksia 
-	  		on kertynyt eri puolueiden ehdokkailta kunnallisvaalien lähestyessä.
-	  		Ilmoituksia alettiin seurata 7.10.2012 ja seurantaa jatketaan
-	  		vaaleihin asti. Vaalien jälkeen sivulle päivitetään valituksi 
-	  		tulleiden vaalirahoitustiedot.
+			Tämän sivun kuvaajat perustuvat <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia.html"> Puolue- ja vaalirahoitusvalvonnan</a> rekisteröimiin vaalirahoituksen
+			ennakkoilmoituksiin. Ennakkoilmoiksen tekeminen on vapaaehtoista ja
+			varsinaisen vaalirahoitusilmoituksen tekevät vaalien tuloksen
+			vahvistamisen jälkeen valitut ja vaalien tulosta vahvistettaessa
+			varaedustajaksi määrätyt.
 		</p>
-	 </div>
-		
-	 <div class="span4">	
-		<h4>Kuinka paljon ehdokkaita on puolueittain?</h4>
-		  
+
 		<p>
-	  		Oikealla alhaalla oleva kuvaaja näyttää kuinka paljon ehdokkaita
-	  		eri puolueilla on maanlaajuisesti ja kunnittain. 
+			Ennakkoilmoitukset on koostettu hakemalla <a href="http://www.vaalirahoitusvalvonta.fi/fi/index/vaalirahailmoituksia/raportit/Tietoaineistot.html.stx"> VRV:n julkaisemia tietoaineistoja</a> automaattisesti ja
+			päivittämällä tiedot Datavaalien tietokantaan.
 		</p>
-     </div>
+
+		<p>
+			Tilanne on viimeksi päivitetty <strong>{{ timestamp|date:"d.m.Y H:i" }}</strong>, jolloin
+			ennakkoilmoituksen on jättänyt <strong>{{ num_submitted }}</strong> ehdokasta.
+		</p>
+
+		<hr />
+
 	</div>
-	 
-	<div class="row-fluid">
-	 <div class="span12">
+</div>
+
+<div id="chooser-container">
+	<select data-placeholder="{% trans "Choose a municipality" %}" id="municipality-chooser">
+		<option value=""></option>
+	</select>
+	<i id="chooser-info" class="icon-info-sign info-icon" rel="popover" data-content="Alla olevat kuvaajat päivittyvät valitun kunnan tiedoilla"></i> 
+</div>
+
+<div class="row-fluid graph-container">
+	<div class="span6">
+		<h5>
+			Ennakkoilmoituksen tehneiden osuus kunnittain
+			<i id="map-info" class="icon-info-sign info-icon" rel="popover" data-content="Jotkin kunnat puuttuvat kokonaan kartalta, sillä niissä ei ole virallisesti yhtään ehdokasta usein tulevien kuntaliitosten takia"></i> 
+		</h5>
+		<div id="map"></div>
+	</div>
+	<div class="span6">
+		<div style="position: relative; margin: 10px 0 10px 0;">
+			<h5>
+				Ennakkoilmoitusten kertyminen, <span class="muni-selection"></span>
+				<i id="muni-perc-info" class="icon-info-sign info-icon" rel="popover" data-content="Kuinka ennakkoilmoituksia on kertynyt eri puolueiden ehdokkailta. Ilmoituksia alettiin seurata 7.10.2012 ja seurantaa jatketaan vaaleihin asti. Vaalien jälkeen sivulle päivitetään valituksi tulleiden vaalirahoitustiedot"></i>
+			</h5>
+			<div id="party-graph"></div>
+			<div id="party-legend"></div>
+		</div>
+	</div>
+	<div class="span6">
+		<div style="position: relative">
+			<h5>
+				Ehdokkaiden lukumäärä puolueittain, <span class="muni-selection"></span>
+				<i id="muni-cand-info" class="icon-info-sign info-icon" rel="popover" data-content=" Kuinka paljon ehdokkaita eri puolueilla on kaikkiaan"></i>
+			</h5>
+			<div id="candidate-graph"></div>
+			<div id="candidate-legend"></div>
+		</div>
+	</div>
+</div>
+<!-- <button id="show-candidates" class="btn btn-primary">Näytä ehdokkaat</button> -->
+<div id="candidate-budgets"></div>
+
+<div class="row-fluid">
+	<div class="span12">
 		<hr />
 		<h4>Löysitkö virheen tai keksitkö parannettavaa?</h4>
-		  
+
 		<p>
-	  		Voit avata uuden issuen tai kommentoida vanhoja datavaalien 
-	  		<a href="https://github.com/kansanmuisti/datavaalit/issues?state=open">
-	  			GitHub-sivuilla</a>. 
+			Voit avata uuden issuen tai kommentoida vanhoja datavaalien
+			<a href="https://github.com/kansanmuisti/datavaalit/issues?state=open"> GitHub-sivuilla</a>.
 		</p>
-	 </div> 	
-  </div>
+	</div>
+</div>
+
 {% endblock %}
 
