@@ -138,23 +138,9 @@
 <script type="text/javascript" src="{% static "js/moment-fi.js" %}"></script>
 {% endcompress %}
 
-{% compress js %}
 <script type="text/javascript" src="{% static "bootstrap/js/bootstrap-popover.js" %}"></script>
-{% endcompress %}
 
-{% compress js %}
-<script type="text/javascript">  
-$(function ()  { 
-		$("#chooser-info").popover();
-		$("#map-info").popover();  
-		$("#muni-perc-info").popover();
-		$("#muni-cand-info").popover();
-		  
-	});  
-</script>  
-{% endcompress %}
-
-{% compress js %}
+{% compress js inline %}
 <script type="text/coffeescript">
 muni_dict = {{ muni_json|safe }}
 
@@ -697,7 +683,8 @@ jQuery ->
       muni_id = parseInt(args.selected)
     set_municipality muni_id
   )
-
+  $('[rel="popover"]').popover
+    trigger: 'hover'
   init_map()
   $(window).trigger('hashchange')
 </script>
