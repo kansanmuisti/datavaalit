@@ -407,8 +407,9 @@ render_budget_submitted = (data, type, full) ->
   if type == 'display' or type == 'filter'
     if not data
       return '<img src="{% static "images/icons-16/cancel.png" %}">'
-    d = new Date(data)
-    return '<img src="{% static "images/icons-16/accept.png" %}">' + " #{ d.getDate() }.#{ d.getMonth() }.#{ d.getFullYear() }"
+    d = new moment(data)
+    date_str = d.format('DD.MM.YYYY')
+    return '<img src="{% static "images/icons-16/accept.png" %}"> ' + date_str
   else
     if not data
       return 0
