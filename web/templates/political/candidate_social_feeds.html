@@ -97,7 +97,7 @@ time {
 {% compress js %}
 <script type="text/javascript" src="{% static "js/chosen.jquery.min.js" %}"></script>
 {% endcompress %}
-{% compress js %}
+{% compress js inline %}
 <script type="text/coffeescript">
 
 SocialFeed = Backbone.Tastypie.Model.extend
@@ -444,4 +444,3 @@ jQuery ->
     </div>
   </script>
 {% endblock %}
-

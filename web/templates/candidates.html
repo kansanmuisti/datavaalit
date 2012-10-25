@@ -15,7 +15,7 @@
 <script type="text/javascript" src="{% static "js/DT_bootstrap.js" %}"></script>
 <script type="text/javascript" src="{% static "js/chosen.jquery.min.js" %}"></script>
 {% endcompress %}
-{% compress js %}
+{% compress js inline %}
 <script type="text/coffeescript">
 jQuery ->
   dataTable_language = {
