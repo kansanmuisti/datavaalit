@@ -19,10 +19,6 @@
 	margin-left: 10px;
 }
 
-#candidate-budgets {
-	margin: 30px 0 30px 0;
-}
-
 #map {
 	width: 450px;
 	height: 650px;
@@ -97,12 +93,55 @@
 #party-legend td {
 	white-space: nowrap;
 }
+
+.query-info {
+	color: #777777;
+	display: none;
+	font-size: 12px;
+	float: right;
+	margin-top: 10px;
+}
+
 .profile-picture {
 	width: 80px;
 }
+
+#candidate-budgets {
+	margin: 40px 0 30px 0;
+}
+
 #candidate-budgets td {
 	vertical-align: middle;
 }
+
+.app-div {
+	margin: 10px 0 10px 0;
+}
+
+.app-div a {
+	color: #333333;
+}
+.app-div a:hover {
+	text-decoration: none;
+	color: #DD4814;	
+}
+
+.app-div .title {
+	font-size: 24px;
+	
+	vertical-align: top;
+}
+
+.app-div .slug {
+	color: #777777;
+	margin-top: 5px;
+}
+
+.app-icon {
+	font-size: 64px;
+	margin-top: 10px;
+}
+
 </style>
 {% endblock %}
 
@@ -446,6 +485,7 @@ render_candidate_budgets = (budgets) ->
   candidate_table = draw_table(candidate_table_columns, budgets, table_el)
   candidate_table.fnSort([[1, 'asc']])
   target_el.show()
+  $('.query-info').css('display', 'inline')
 
 destroy_candidate_budgets = ->
   if candidate_table
@@ -766,6 +806,9 @@ jQuery ->
 	</div>
 </div>
 <!-- <button id="show-candidates" class="btn btn-primary">Näytä ehdokkaat</button> -->
+<span class="query-info">
+	Voit suodattaa tietoja nimen tai puolueen perusteella
+</span>
 <div id="candidate-budgets"></div>
 
 <div class="row-fluid">
@@ -779,6 +822,48 @@ jQuery ->
 		</p>
 	</div>
 </div>
+
+<div class="row-fluid">
+	<h2>Sovelluksia</h2>
+	<div class="span12">
+		<div class="span4 app-div">
+			<a href="/data/candidates/">
+				<div class="span3">
+					<i class="icon-group app-icon"></i>
+				</div>
+				<div class="span9">
+					<span class="title">{% trans "Canidate listing" %}</span>
+					<p class="slug">Ehdokkaiden perustietoja</p>
+				</div>
+			</a>
+		</div>
+		
+		<div class="span4 app-div">
+			<a href="/candidates/social/">
+				<div class="span3">
+					<i class="icon-share app-icon"></i>
+				</div>
+				<div class="span9">
+					<span class="title">{% trans "Social feeds" %}</span>
+					<p class="slug">Selaa kunnallisvaaliehdokkaiden sosiaalisen median päivityksiä</p>
+				</div>
+			</a>
+		</div>
+		
+		<div class="span4 app-div">
+			<a href="/candidates/budgets/">
+				<div class="span3">
+					<i class="icon-money app-icon"></i>
+				</div>
+				<div class="span9">
+					<span class="title">{% trans "Budget disclosures" %}</span>
+					<p class="slug">Selaa kunnallisvaaliehdokkaiden sosiaalisen median päivityksiä</p>
+				</div>
+			</a>
+		</div>
+	</div>
+</div>
+	
 
 {% endblock %}
 
