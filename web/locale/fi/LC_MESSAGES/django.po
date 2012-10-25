@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-10-25 03:30+0300\n"
+"POT-Creation-Date: 2012-10-25 05:07+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -50,33 +50,33 @@ msgstr "Kirjaudu ulos"
 msgid "Candidates"
 msgstr "Ehdokkaat"
 
-#: templates/candidates.html:44 templates/political/candidate_budgets.html:388
+#: templates/candidates.html:43 templates/political/candidate_budgets.html:393
 msgid "Picture"
 msgstr "Kuva"
 
-#: templates/candidates.html:50 templates/political/candidate_budgets.html:394
+#: templates/candidates.html:49 templates/political/candidate_budgets.html:399
 msgid "Number"
 msgstr "Numero"
 
-#: templates/candidates.html:54 templates/political/candidate_budgets.html:398
+#: templates/candidates.html:53 templates/political/candidate_budgets.html:403
 #: templates/profiles/_profile_info.html:3
 msgid "Name"
 msgstr "Nimi"
 
-#: templates/candidates.html:57 templates/political/candidate_budgets.html:401
+#: templates/candidates.html:56 templates/political/candidate_budgets.html:406
 msgid "Party"
 msgstr "Puolue"
 
-#: templates/candidates.html:61
+#: templates/candidates.html:60
 msgid "Profession"
 msgstr "Ammatti"
 
-#: templates/candidates.html:151
+#: templates/candidates.html:150
 msgid "Candidates for municipality election 2012"
 msgstr "Kunnallisvaaliehdokkaat 2012"
 
-#: templates/candidates.html:153
-#: templates/political/candidate_budgets.html:697
+#: templates/candidates.html:152
+#: templates/political/candidate_budgets.html:715
 #: templates/political/candidate_social_feeds.html:393
 msgid "Choose a municipality"
 msgstr "Valitse kunta"
@@ -93,33 +93,45 @@ msgstr "Etusivu"
 msgid "Community"
 msgstr "Yhteisö"
 
-#: templates/site_base.html:60
+#: templates/site_base.html:62
 msgid "Resources"
 msgstr "Resurssit"
 
-#: templates/site_base.html:63
-msgid "Participate"
-msgstr "Osallistu"
-
-#: templates/site_base.html:66
+#: templates/site_base.html:65 templates/site_base.html.py:75
 msgid "General"
 msgstr "Yleistä"
 
+#: templates/site_base.html:66
+msgid "API"
+msgstr "API"
+
 #: templates/site_base.html:67
+msgid "Data catalogue"
+msgstr "Datakatalogi"
+
+#: templates/site_base.html:68
+msgid "Packaging"
+msgstr "Datan paketointi"
+
+#: templates/site_base.html:72
+msgid "Participate"
+msgstr "Osallistu"
+
+#: templates/site_base.html:76
 msgid "Scrapers"
 msgstr "Ruudunraapijat"
 
 #: templates/political/candidate_budgets.html:217
-#: templates/political/candidate_budgets.html:479
+#: templates/political/candidate_budgets.html:494
 #: templates/political/candidate_change_request.html:34
 msgid "Communication with server failed"
 msgstr "Yhteys serveriin epäonnistui"
 
-#: templates/political/candidate_budgets.html:405
+#: templates/political/candidate_budgets.html:410
 msgid "Age"
 msgstr "Ikä"
 
-#: templates/political/candidate_budgets.html:409
+#: templates/political/candidate_budgets.html:414
 msgid "Budget submitted"
 msgstr "Ilmoitus jätetty"
 
