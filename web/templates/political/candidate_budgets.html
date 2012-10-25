@@ -19,10 +19,6 @@
 	margin-left: 10px;
 }
 
-#candidate-budgets {
-	margin: 30px 0 30px 0;
-}
-
 #map {
 	width: 450px;
 	height: 650px;
@@ -97,12 +93,27 @@
 #party-legend td {
 	white-space: nowrap;
 }
+
+.query-info {
+	color: #777777;
+	display: none;
+	font-size: 12px;
+	float: right;
+	margin-top: 10px;
+}
+
 .profile-picture {
 	width: 80px;
 }
+
+#candidate-budgets {
+	margin: 40px 0 30px 0;
+}
+
 #candidate-budgets td {
 	vertical-align: middle;
 }
+
 </style>
 {% endblock %}
 
@@ -447,6 +458,7 @@ render_candidate_budgets = (budgets) ->
   candidate_table = draw_table(candidate_table_columns, budgets, table_el)
   candidate_table.fnSort([[1, 'asc']])
   target_el.show()
+  $('.query-info').css('display', 'inline')
 
 destroy_candidate_budgets = ->
   if candidate_table
@@ -767,6 +779,9 @@ jQuery ->
 	</div>
 </div>
 <!-- <button id="show-candidates" class="btn btn-primary">Näytä ehdokkaat</button> -->
+<span class="query-info">
+	Voit suodattaa tietoja nimen tai puolueen perusteella
+</span>
 <div id="candidate-budgets"></div>
 
 <div class="row-fluid">
