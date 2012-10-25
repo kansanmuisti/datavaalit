@@ -71,6 +71,8 @@ class VaalirahoitusImporter(Importer):
             cand['last_name'] = row[1]
             candidate_name = cand['first_names'] + ' ' + cand['last_name']
             cand['municipality'] = {'name': row[3]}
+            cand['party'] = row[4]
+            cand['profession'] = row[2]
 
             expenses = []
             for expense_type in EXPENSE_TYPES:

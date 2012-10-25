@@ -188,6 +188,7 @@ class DjangoBackend(Backend):
         # Since expense reports can have several firstnames, try
         # following names as well if the 1st doesn't match.
         # TODO: heuristics here could be done smarter
+        # FIXME: add all of first_names as the first entry
         first_names = info['first_names'].split()
 
         # Break two-part names ("John-Peter") into to individual names 
@@ -496,6 +497,12 @@ class DjangoBackend(Backend):
         election = Election.objects.get(type=election['type'], year=election['year'])
 
         self.logger.info("Backend received %s candidates" % len(candidates))
+
+        # check from timestamp if we have this file already in the DB
+        ts = candidates[0]['timestamp']
+        if CampaignBudget.objects.filter(time_submitted__gte=ts).count() and not self.replace:
+            self.logger.info("Skipping already submitted, old entries")
+            return
 
         # First, populate ExpenseType table if not populated already
         stored_types = list(CampaignExpenseType.objects.all())
