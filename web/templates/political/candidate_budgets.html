@@ -5,15 +5,10 @@
 {% block head_title %}Kunnallisvaaliehdokkaiden ennakkorahoitusilmoitukset{% endblock %}
 
 {% block extra_style %}
-{% compress js %}
 <link rel="stylesheet" type="text/css" href="{% static "css/DT_bootstrap.css" %}">
-<link rel="stylesheet" type="text/css" href="{% static "css/chosen.css" %}">
-{% endcompress %}
-
 <link rel="stylesheet" href="http://leaflet.cloudmade.com/dist/leaflet.css" />
+
 <style>
-
-
 #map {
 	width: 450px;
 	height: 650px;
@@ -88,7 +83,12 @@
 #party-legend td {
 	white-space: nowrap;
 }
-
+.profile-picture {
+	width: 80px;
+}
+#candidate-budgets td {
+	vertical-align: middle;
+}
 </style>
 {% endblock %}
 
@@ -168,13 +168,8 @@ draw_table = (columns, objects, target) ->
     if col.type == 'img'
       attr.bSortable = false
       attr.bSearchable = false
-    else if col.type == 'date'
-      attr.mRender = (data, type, full) ->
-        if type == 'display' or type == 'filter'
-          d = new Date(data)
-          return "#{ d.getDate() }.#{ d.getMonth() }.#{ d.getFullYear() }"
-        else
-          return data
+    if col.render
+      attr.mRender = col.render
     cols.push(attr)
 
   args = {
@@ -255,11 +250,16 @@ render_plots = (party_list) ->
   num_data = []
   num_ticks = []
   i = 0
+  # Filter out smallest parties
   if party_list.length > 10
-    do_filtering = true
+    spl = _.sortBy(party_list, (p) ->
+      return -p.num_candidates
+    )
+    for i in [10..spl.length-1]
+      spl[i].filter = true
 
   for p in party_list
-    if not do_filtering or p.num_candidates > 40
+    if not p.filter
       args =
         label: p.code
         data: [[i, p.num_candidates]]
@@ -279,7 +279,7 @@ render_plots = (party_list) ->
     # Include only parties that actually have candidates
     # submitting budgets.
     last_percent = data[data.length-1][1]
-    if do_filtering and last_percent == 0.0
+    if p.filter and last_percent == 0.0
       continue
     args =
       data: data
@@ -375,6 +375,19 @@ render_plots = (party_list) ->
       update_legend_timeout = setTimeout(update_legend, 50)  
   )
 
+
+render_budget_submitted = (data, type, full) ->
+  if type == 'display' or type == 'filter'
+    if not data
+      return '<img src="{% static "images/icons-16/cancel.png" %}">'
+    d = new Date(data)
+    return '<img src="{% static "images/icons-16/accept.png" %}">' + " #{ d.getDate() }.#{ d.getMonth() }.#{ d.getFullYear() }"
+  else
+    if not data
+      return 0
+    else
+      return data
+
 candidate_table_columns = [
   {
     name: "{% trans "Picture" %}"
@@ -394,33 +407,66 @@ candidate_table_columns = [
     field: "party_code"
     width: "8em"
   }, {
+    name: "{% trans "Age" %}"
+    field: "age"
+    width: "5em"
+  }, {  
     name: "{% trans "Budget submitted" %}"
-    field: "time_submitted"
-    type: "date"
+    field: "budget_submitted"
+    render: render_budget_submitted
   }
 ]
 
 candidate_table = null
+candidate_budget_spinner = null
 
 render_candidate_budgets = (budgets) ->
-  if candidate_table
-    candidate_table.fnDestroy()
   for b in budgets
     _.extend(b, b.candidate)
     b.time_submitted = moment(b.time_submitted).valueOf()
-  candidate_table = draw_table(candidate_table_columns, budgets, $("#candidate-budgets"))
+  table_el = $('<table class="table table-striped"></table>')
+  target_el = $("#candidate-budgets")
+  target_el.append(table_el)
+  candidate_table = draw_table(candidate_table_columns, budgets, table_el)
   candidate_table.fnSort([[1, 'asc']])
-  $("#candidate-budgets").show()
+  target_el.show()
 
-fetch_candidate_budgets = (muni_id) ->
-  console.log "fetching budgets"
+destroy_candidate_budgets = ->
+  if candidate_table
+    candidate_table.fnDestroy()
+    candidate_table = null
+  if candidate_budget_spinner
+    candidate_budget_spinner.stop()
+    candidate_budget_spinner = null
+  $("#candidate-budgets").html('')
+
+fetch_campaign_budgets = (muni_id, candidate_list) ->
   api_fetch "campaign_budget",
     search_args: "candidate__municipality=#{ muni_id }"
     limit: 1000
+    all: true
     callback: (objs) ->
-      console.log objs[0]
-      render_candidate_budgets(objs)
-  return 0
+      candidate_dict = {}
+      for c in candidate_list
+        candidate_dict[c.id] = c
+        c.budget_submitted = null
+      for b in objs
+        arr = b.candidate.split('/')
+        cand_id = arr[arr.length-2]
+        cand = candidate_dict[cand_id]
+        cand.budget_submitted = b.time_submitted
+      destroy_candidate_budgets()
+      render_candidate_budgets(candidate_list)
+  
+fetch_candidates = (muni_id) ->
+  destroy_candidate_budgets()
+  candidate_budget_spinner = new Spinner().spin($("#candidate-budgets")[0])
+  api_fetch "candidate",
+    search_args: "municipality=#{ muni_id }"
+    limit: 1000
+    all: true
+    callback: (objs) ->
+      fetch_campaign_budgets(muni_id, objs)
 
 selected_municipality = null
 
@@ -437,7 +483,7 @@ render_municipality = (muni_id) ->
   spinner = new Spinner().spin($("#party-graph")[0])
   if muni_id
     data = {municipality: muni_id}
-    fetch_candidate_budgets(muni_id)
+    fetch_candidates(muni_id)
   else
     data = {}
     $("#candidate-budgets").hide()
@@ -606,8 +652,12 @@ $(window).bind('hashchange', ->
 # The code below is run after the HTML document has finished loading.
 jQuery ->
   muni_ch = $("#municipality-chooser")
-  for id, muni of muni_dict
-    el = $("<option value=#{ id }>#{ muni.name }</option>")
+  muni_list = ([id, muni.name] for id, muni of muni_dict)
+  muni_list = _.sortBy(muni_list, (m) ->
+    return m[1]
+  )
+  for m in muni_list
+    el = $("<option value=#{ m[0] }>#{ m[1] }</option>")
     muni_ch.append el
   chosen_args = {allow_single_deselect: true}
   $("#municipality-chooser").chosen(chosen_args).change((ev, args) ->
@@ -615,7 +665,6 @@ jQuery ->
       muni_id = 0
     else
       muni_id = parseInt(args.selected)
-    console.log "chooser", muni_id
     set_municipality muni_id
   )
 
@@ -688,9 +737,7 @@ jQuery ->
 		  </div>
 		</div>
   <!-- <button id="show-candidates" class="btn btn-primary">Näytä ehdokkaat</button> -->
-  <div id="candidate-budgets-container">
-    <hr>
-    <table id="candidate-budgets" class="span12 table table-striped"></table>
+  <div id="candidate-budgets">
   </div>
   <hr>
   <div class="row-fluid">

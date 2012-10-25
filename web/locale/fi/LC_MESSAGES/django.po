@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2012-10-25 02:39+0300\n"
+"POT-Creation-Date: 2012-10-25 03:30+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -50,20 +50,20 @@ msgstr "Kirjaudu ulos"
 msgid "Candidates"
 msgstr "Ehdokkaat"
 
-#: templates/candidates.html:44 templates/political/candidate_budgets.html:380
+#: templates/candidates.html:44 templates/political/candidate_budgets.html:388
 msgid "Picture"
 msgstr "Kuva"
 
-#: templates/candidates.html:50 templates/political/candidate_budgets.html:386
+#: templates/candidates.html:50 templates/political/candidate_budgets.html:394
 msgid "Number"
 msgstr "Numero"
 
-#: templates/candidates.html:54 templates/political/candidate_budgets.html:390
+#: templates/candidates.html:54 templates/political/candidate_budgets.html:398
 #: templates/profiles/_profile_info.html:3
 msgid "Name"
 msgstr "Nimi"
 
-#: templates/candidates.html:57 templates/political/candidate_budgets.html:393
+#: templates/candidates.html:57 templates/political/candidate_budgets.html:401
 msgid "Party"
 msgstr "Puolue"
 
@@ -76,7 +76,7 @@ msgid "Candidates for municipality election 2012"
 msgstr "Kunnallisvaaliehdokkaat 2012"
 
 #: templates/candidates.html:153
-#: templates/political/candidate_budgets.html:666
+#: templates/political/candidate_budgets.html:697
 #: templates/political/candidate_social_feeds.html:393
 msgid "Choose a municipality"
 msgstr "Valitse kunta"
@@ -109,13 +109,17 @@ msgstr "Yleistä"
 msgid "Scrapers"
 msgstr "Ruudunraapijat"
 
-#: templates/political/candidate_budgets.html:222
-#: templates/political/candidate_budgets.html:448
+#: templates/political/candidate_budgets.html:217
+#: templates/political/candidate_budgets.html:479
 #: templates/political/candidate_change_request.html:34
 msgid "Communication with server failed"
-msgstr ""
+msgstr "Yhteys serveriin epäonnistui"
 
-#: templates/political/candidate_budgets.html:397
+#: templates/political/candidate_budgets.html:405
+msgid "Age"
+msgstr "Ikä"
+
+#: templates/political/candidate_budgets.html:409
 msgid "Budget submitted"
 msgstr "Ilmoitus jätetty"
 
