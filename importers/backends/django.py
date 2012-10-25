@@ -82,7 +82,12 @@ MATCH_TABLE = {
     'Seija Sinikka Soljasalo (Mikkeli)' : {'first_name': 'Sini'},
     'Gijsbert Hovestadt (Lahti)' : {'first_name': 'Bert'},
     'Riitta Kaarina Marttinen (Jyväskylä)' : {'first_name': 'Rita'},
-    'Eva Maria Loikkanen (Vantaa)' : {'first_name': 'Eva Maria'}
+    'Eva Maria Loikkanen (Vantaa)' : {'first_name': 'Eva Maria'},
+    'Marja Sisko Helena Nousiainen (Savonlinna)': {'first_name': 'Marja Sisko'},
+    'Kaija Kristiina Loikkanen (Helsinki)': {'first_name': 'Tiina'},
+    'Jari Niilo Johannes Tikkanen (Kiuruvesi)': {'first_name': 'Jari', 'index': 1},
+    'Tuula Heli Maritta Lukkari (Utsjoki)': {'first_name': 'Tuula Heli Maritta'},
+    'Silja Maria Borgarsdóttir Sandelin (Helsinki)': {'first_name': 'Silja Borgarsdóttir'},
 }
 
 class DjangoBackend(Backend):
