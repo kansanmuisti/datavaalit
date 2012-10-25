@@ -75,3 +75,9 @@ Ubuntu:
     sudo add-apt-repository ppa:ubuntugis/ubuntugis-unstable
     apt-get update
     apt-get install python-gdal libgdal1 libproj-dev
+
+Attribution
+===========
+
+Datavaalit uses following open source technologies:
+- Font Awesome (http://fortawesome.github.com/Font-Awesome)
