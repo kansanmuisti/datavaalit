@@ -468,6 +468,8 @@ class DjangoBackend(Backend):
                 if 'party' in c:
                     candidate.party_code = c['party']
                     candidate.party = self.party_dict.get(c['party'], None)
+                if 'age' in c:
+                    candidate.age = c['age']
                 candidate.save()
 
             if 'picture' in c:
