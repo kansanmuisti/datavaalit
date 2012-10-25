@@ -83,7 +83,12 @@ MATCH_TABLE = {
     'Gijsbert Hovestadt (Lahti)' : {'first_name': 'Bert'},
     'Riitta Kaarina Marttinen (Jyväskylä)' : {'first_name': 'Rita'},
     'Eva Maria Loikkanen (Vantaa)' : {'first_name': 'Eva Maria'},
-    'Mauri Selim Aleksanteri Järvinen (Urjala)': {'first_name': 'Mauri (Jami)'}
+    'Marja Sisko Helena Nousiainen (Savonlinna)': {'first_name': 'Marja Sisko'},
+    'Kaija Kristiina Loikkanen (Helsinki)': {'first_name': 'Tiina'},
+    'Jari Niilo Johannes Tikkanen (Kiuruvesi)': {'first_name': 'Jari', 'index': 1},
+    'Tuula Heli Maritta Lukkari (Utsjoki)': {'first_name': 'Tuula Heli Maritta'},
+    'Silja Maria Borgarsdóttir Sandelin (Helsinki)': {'first_name': 'Silja Borgarsdóttir'},
+    'Mauri Selim Aleksanteri Järvinen (Urjala)': {'first_name': 'Mauri (Jami)'},
 }
 
 class DjangoBackend(Backend):
@@ -184,6 +189,7 @@ class DjangoBackend(Backend):
         # Since expense reports can have several firstnames, try
         # following names as well if the 1st doesn't match.
         # TODO: heuristics here could be done smarter
+        # FIXME: add all of first_names as the first entry
         first_names = info['first_names'].split()
 
         # Break two-part names ("John-Peter") into to individual names 
@@ -469,7 +475,14 @@ class DjangoBackend(Backend):
                 if 'party' in c:
                     candidate.party_code = c['party']
                     candidate.party = self.party_dict.get(c['party'], None)
+                if 'age' in c:
+                    candidate.age = c['age']
                 candidate.save()
+
+            if 'picture' in c:
+                candidate.picture = c['picture']
+                candidate.save()
+
             if 'social' in c:
                 social = c['social']
                 if 'fb_feed' in social:
@@ -485,6 +498,12 @@ class DjangoBackend(Backend):
         election = Election.objects.get(type=election['type'], year=election['year'])
 
         self.logger.info("Backend received %s candidates" % len(candidates))
+
+        # check from timestamp if we have this file already in the DB
+        ts = candidates[0]['timestamp']
+        if CampaignBudget.objects.filter(time_submitted__gte=ts).count() and not self.replace:
+            self.logger.info("Skipping already submitted, old entries")
+            return
 
         # First, populate ExpenseType table if not populated already
         stored_types = list(CampaignExpenseType.objects.all())

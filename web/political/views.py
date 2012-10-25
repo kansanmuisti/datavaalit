@@ -12,6 +12,7 @@ from django.core.mail import mail_admins
 from django.http import HttpResponseRedirect, HttpResponse, Http404
 from django.db.models import Count
 from django.core.cache import cache
+from django.template.defaultfilters import slugify
 
 def show_candidates_social_feeds(request):
     tw = {}
@@ -106,13 +107,15 @@ def _calc_prebudget_stats():
     total_submitted = 0
     for muni in muni_list:
         m = {'num_submitted': muni.num_submitted,
-             'num_candidates': muni.num_candidates}
+             'num_candidates': muni.num_candidates,
+             'name': muni.name}
+        m['slug'] = slugify(muni.name)
         muni_dict[muni.pk] = m
         total_cands += muni.num_candidates
         total_submitted += muni.num_submitted
     args['num_candidates'] = total_cands
     args['num_submitted'] = total_submitted
-    args['muni_json'] = json.dumps(muni_dict, indent=None)
+    args['muni_json'] = json.dumps(muni_dict, indent=None, ensure_ascii=False)
     args['timestamp'] = timestamp
 
     return args

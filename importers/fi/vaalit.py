@@ -97,6 +97,7 @@ class VaalitImporter(Importer):
                 cand['last_name'] = row[16]
                 gender = int(row[17])
                 cand['gender'] = {1: 'M', 2:'F'}[gender]
+                cand['age'] = int(row[18])
                 cand['profession'] = row[19]
                 cand['number'] = int(row[12])
                 names.append(("%s %s" % (row[15], row[16]), cand))

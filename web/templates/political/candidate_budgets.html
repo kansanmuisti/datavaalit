@@ -5,10 +5,10 @@
 {% block head_title %}Kunnallisvaaliehdokkaiden ennakkorahoitusilmoitukset{% endblock %}
 
 {% block extra_style %}
+<link rel="stylesheet" type="text/css" href="{% static "css/DT_bootstrap.css" %}">
 <link rel="stylesheet" href="http://leaflet.cloudmade.com/dist/leaflet.css" />
+
 <style>
-
-
 #map {
 	width: 450px;
 	height: 650px;
@@ -69,8 +69,12 @@
 	opacity: 0.7;
 }
 
+#chooser-container {
+	margin-top: 20px;
+}
+
 .graph-container {
-	margin: 40px 0 40px 0;
+	margin-bottom: 0px;
 }
 
 #party-legend .highlight {
@@ -79,16 +83,30 @@
 #party-legend td {
 	white-space: nowrap;
 }
-
+.profile-picture {
+	width: 80px;
+}
+#candidate-budgets td {
+	vertical-align: middle;
+}
 </style>
 {% endblock %}
 
 {% block extra_script %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/underscore.js" %}"></script>
+<script type="text/javascript" src="{% static "js/backbone.js" %}"></script>
+<script type="text/javascript" src="{% static "js/backbone-tastypie.js" %}"></script>
+<script type="text/javascript" src="{% static "js/jquery.ba-bbq.js" %}"></script>
 {% endcompress %}
 {% compress js %}
 <script type="text/javascript" src="{% static "js/spin.min.js" %}"></script>
+{% endcompress %}
+
+{% compress js %}
+<script type="text/javascript" src="{% static "js/jquery.dataTables.js" %}"></script>
+<script type="text/javascript" src="{% static "js/DT_bootstrap.js" %}"></script>
+<script type="text/javascript" src="{% static "js/chosen.jquery.min.js" %}"></script>
 {% endcompress %}
 
 {% compress js %}
@@ -102,8 +120,93 @@
 {% endcompress %}
 
 {% compress js %}
+<script type="text/javascript" src="{% static "js/moment.js" %}"></script>
+<script type="text/javascript" src="{% static "js/moment-fi.js" %}"></script>
+{% endcompress %}
+
+{% compress js %}
 <script type="text/coffeescript">
 muni_dict = {{ muni_json|safe }}
+
+dataTable_language = {
+  "sProcessing":   "Hetkinen...",
+  "sLengthMenu":   "Näytä kerralla _MENU_ riviä",
+  "sZeroRecords":  "Tietoja ei löytynyt",
+  "sInfo":         "Näytetään rivit _START_ - _END_ (yhteensä _TOTAL_ )",
+  "sInfoEmpty":    "Näytetään 0 - 0 (yhteensä 0)",
+  "sInfoFiltered": "(suodatettu _MAX_ tuloksen joukosta)",
+  "sInfoPostFix":  "",
+  "sSearch":       "Etsi:",
+  "sUrl":          "",
+  "oPaginate": {
+      "sFirst":    "Ensimmäinen",
+      "sPrevious": "Edellinen",
+      "sNext":     "Seuraava",
+      "sLast":     "Viimeinen"
+  }
+}
+draw_table = (columns, objects, target) ->
+  rows = []
+  for obj in objects
+    row = []
+    for col in columns
+      val = obj[col.field]
+      if col.type == 'img'
+        if val
+          row.push("<img src='#{ val }' class='#{ col.class }'>")
+        else
+          row.push("")
+      else
+        row.push(val)
+    rows.push(row)
+
+  cols = []
+  for col in columns
+    attr = {sTitle: col.name}
+    if 'width' of col
+      attr.sWidth = col.width
+    if col.type == 'img'
+      attr.bSortable = false
+      attr.bSearchable = false
+    if col.render
+      attr.mRender = col.render
+    cols.push(attr)
+
+  args = {
+    sDom: "<'row'<'span6'l><'span6'f>r>t<'row'<'span6'i><'span6'p>>"
+    sPaginationType: "bootstrap"
+    oLanguage: dataTable_language
+    aaData: rows
+    aoColumns: cols
+  }
+  return target.dataTable args
+
+api_fetch = (type, opts) ->
+  url = "/api/v1/#{ type }/?format=json"
+  if opts.limit
+    url += "&limit=" + opts.limit
+  else
+    url += "&limit=100"
+  if opts.search_args
+    url += "&" + opts.search_args
+  if opts.error_callback
+    error_cb = opts.error_callback
+  else
+    error_cb = ->
+      alert "Communication with server failed"
+
+  objs = []
+  fetch_objs = (url) ->
+    $.ajax url,
+      dataType: "json"
+      success: (data) ->
+        objs = objs.concat data.objects
+        if data.meta.next && opts.all
+          fetch_objs data.meta.next
+        else
+          opts.callback objs
+      error: error_cb
+  fetch_objs url
 
 $.ajax '/api/v1/municipality/'
   dataType: 'json'
@@ -147,11 +250,16 @@ render_plots = (party_list) ->
   num_data = []
   num_ticks = []
   i = 0
+  # Filter out smallest parties
   if party_list.length > 10
-    do_filtering = true
+    spl = _.sortBy(party_list, (p) ->
+      return -p.num_candidates
+    )
+    for i in [10..spl.length-1]
+      spl[i].filter = true
 
   for p in party_list
-    if not do_filtering or p.num_candidates > 40
+    if not p.filter
       args =
         label: p.code
         data: [[i, p.num_candidates]]
@@ -171,7 +279,7 @@ render_plots = (party_list) ->
     # Include only parties that actually have candidates
     # submitting budgets.
     last_percent = data[data.length-1][1]
-    if do_filtering and last_percent == 0.0
+    if p.filter and last_percent == 0.0
       continue
     args =
       data: data
@@ -267,13 +375,118 @@ render_plots = (party_list) ->
       update_legend_timeout = setTimeout(update_legend, 50)  
   )
 
-update_plots = (muni_id, muni_name) ->
+
+render_budget_submitted = (data, type, full) ->
+  if type == 'display' or type == 'filter'
+    if not data
+      return '<img src="{% static "images/icons-16/cancel.png" %}">'
+    d = new Date(data)
+    return '<img src="{% static "images/icons-16/accept.png" %}">' + " #{ d.getDate() }.#{ d.getMonth() }.#{ d.getFullYear() }"
+  else
+    if not data
+      return 0
+    else
+      return data
+
+candidate_table_columns = [
+  {
+    name: "{% trans "Picture" %}"
+    field: "picture"
+    width: "6em"
+    type: "img"
+    class: "profile-picture"
+  }, {
+    name: "{% trans "Number" %}"
+    field: "number"
+    width: "6em"
+  }, {
+    name: "{% trans "Name" %}"
+    field: "person_name"
+  }, {
+    name: "{% trans "Party" %}"
+    field: "party_code"
+    width: "8em"
+  }, {
+    name: "{% trans "Age" %}"
+    field: "age"
+    width: "5em"
+  }, {  
+    name: "{% trans "Budget submitted" %}"
+    field: "budget_submitted"
+    render: render_budget_submitted
+  }
+]
+
+candidate_table = null
+candidate_budget_spinner = null
+
+render_candidate_budgets = (budgets) ->
+  for b in budgets
+    _.extend(b, b.candidate)
+    b.time_submitted = moment(b.time_submitted).valueOf()
+  table_el = $('<table class="table table-striped"></table>')
+  target_el = $("#candidate-budgets")
+  target_el.append(table_el)
+  candidate_table = draw_table(candidate_table_columns, budgets, table_el)
+  candidate_table.fnSort([[1, 'asc']])
+  target_el.show()
+
+destroy_candidate_budgets = ->
+  if candidate_table
+    candidate_table.fnDestroy()
+    candidate_table = null
+  if candidate_budget_spinner
+    candidate_budget_spinner.stop()
+    candidate_budget_spinner = null
+  $("#candidate-budgets").html('')
+
+fetch_campaign_budgets = (muni_id, candidate_list) ->
+  api_fetch "campaign_budget",
+    search_args: "candidate__municipality=#{ muni_id }"
+    limit: 1000
+    all: true
+    callback: (objs) ->
+      candidate_dict = {}
+      for c in candidate_list
+        candidate_dict[c.id] = c
+        c.budget_submitted = null
+      for b in objs
+        arr = b.candidate.split('/')
+        cand_id = arr[arr.length-2]
+        cand = candidate_dict[cand_id]
+        cand.budget_submitted = b.time_submitted
+      destroy_candidate_budgets()
+      render_candidate_budgets(candidate_list)
+  
+fetch_candidates = (muni_id) ->
+  destroy_candidate_budgets()
+  candidate_budget_spinner = new Spinner().spin($("#candidate-budgets")[0])
+  api_fetch "candidate",
+    search_args: "municipality=#{ muni_id }"
+    limit: 1000
+    all: true
+    callback: (objs) ->
+      fetch_campaign_budgets(muni_id, objs)
+
+selected_municipality = null
+
+render_municipality = (muni_id) ->
+  if muni_id == 0
+    muni_name = "koko maa"
+  else
+    muni_name = muni_dict[muni_id].name
+
+  $("#municipality-chooser").val(muni_id)
+  $("#municipality-chooser").trigger("liszt:updated")
+
   $("#party-graph").html('')
   spinner = new Spinner().spin($("#party-graph")[0])
   if muni_id
     data = {municipality: muni_id}
+    fetch_candidates(muni_id)
   else
     data = {}
+    $("#candidate-budgets").hide()
   $.ajax '/candidates/fetch-party-budget/'
     dataType: 'json'
     data: data
@@ -285,7 +498,11 @@ update_plots = (muni_id, muni_name) ->
       $(".muni-selection").html(muni_name)
       render_plots party_list
 
-update_plots(0, "koko maa")
+set_municipality = (muni_name) ->
+  hash_str = "#?"
+  if muni_name
+    hash_str += "municipality=" + muni_dict[muni_name].slug
+  $.bbq.pushState hash_str
 
 stored_geojson = null
 handle_geojson = (json) ->
@@ -370,7 +587,7 @@ init_map = ->
 
   on_each_feature = (feature, layer) ->
     zoom_to_feature = (e) ->
-      update_plots(feature.id, feature.properties.name)
+      set_municipality(feature.id)
       #map.fitBounds(e.target.getBounds())
 
     layer.on
@@ -415,10 +632,44 @@ init_map = ->
     map.panTo([66.0, 27.8])
   if stored_geojson
     handle_geojson(stored_geojson)
- 
+
+$(window).bind('hashchange', ->
+  hash = window.location.hash
+  if hash.substring(0, 2) == "#?"
+    hash = hash.substring(2)
+  params = $.deparam(hash)
+  muni_name = params.municipality
+  muni_id = 0
+  if muni_name
+    muni_name = muni_name.toLowerCase()
+    for id, muni of muni_dict
+      if muni.slug == muni_name
+        muni_id = id
+        break
+  render_municipality(muni_id)
+)
+
 # The code below is run after the HTML document has finished loading.
 jQuery ->
+  muni_ch = $("#municipality-chooser")
+  muni_list = ([id, muni.name] for id, muni of muni_dict)
+  muni_list = _.sortBy(muni_list, (m) ->
+    return m[1]
+  )
+  for m in muni_list
+    el = $("<option value=#{ m[0] }>#{ m[1] }</option>")
+    muni_ch.append el
+  chosen_args = {allow_single_deselect: true}
+  $("#municipality-chooser").chosen(chosen_args).change((ev, args) ->
+    if not args
+      muni_id = 0
+    else
+      muni_id = parseInt(args.selected)
+    set_municipality muni_id
+  )
+
   init_map()
+  $(window).trigger('hashchange')
 </script>
 {% endcompress %}
 {% endblock %}
@@ -460,14 +711,16 @@ jQuery ->
 		
 	    </div>
 	 </div>
-		 
-		
+         <div id="chooser-container">
+           <select data-placeholder="{% trans "Choose a municipality" %}" id="municipality-chooser">
+             <option value=""></option>
+           </select>
+         </select>
 	 	<div class="row-fluid graph-container">
 	 	  <div class="span6">
 	 	  	<h5>Ennakkoilmoittaneiden osuus kunnittain</h5>
 	 		<div id="map"></div>
 		  </div>
-		  
 		  <div class="span6">
 			  <div style="position: relative; margin: 10px 0 10px 0;">
 			  	<h5>Ennakkoilmoitusten kertyminen, <span class="muni-selection"></span></h5>
@@ -475,7 +728,6 @@ jQuery ->
 			    <div id="party-legend"></div>
 			  </div>
 		  </div>
-		  
 		  <div class="span6">
 			  <div style="position: relative">
 			  	<h5>Ehdokkaiden lukumäärä puolueittain, <span class="muni-selection"></span></h5>
@@ -484,7 +736,10 @@ jQuery ->
 			  </div>
 		  </div>
 		</div>
-  
+  <!-- <button id="show-candidates" class="btn btn-primary">Näytä ehdokkaat</button> -->
+  <div id="candidate-budgets">
+  </div>
+  <hr>
   <div class="row-fluid">
 	  
 	  <div class="span4">		

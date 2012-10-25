@@ -121,3 +121,16 @@ class MunicipalityTrusteeResource(ModelResource):
     class Meta:
         queryset = MunicipalityTrustee.objects.order_by('committee', 'role')
         resource_name = 'municipality_trustee'
+
+class CampaignBudgetResource(ModelResource):
+    candidate = fields.ToOneField('political.api.CandidateResource', 'candidate')
+
+    class Meta:
+        queryset = CampaignBudget.objects.all()
+        resource_name = 'campaign_budget'
+        filtering = {
+            'candidate': ALL_WITH_RELATIONS,
+            'active': ALL,
+            'time_submitted': ALL,
+        }
+        ordering = ['candidate__municipality', 'candidate__number', 'time_submitted']
