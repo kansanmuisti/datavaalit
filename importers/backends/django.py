@@ -88,6 +88,7 @@ MATCH_TABLE = {
     'Jari Niilo Johannes Tikkanen (Kiuruvesi)': {'first_name': 'Jari', 'index': 1},
     'Tuula Heli Maritta Lukkari (Utsjoki)': {'first_name': 'Tuula Heli Maritta'},
     'Silja Maria Borgarsdóttir Sandelin (Helsinki)': {'first_name': 'Silja Borgarsdóttir'},
+    'Mauri Selim Aleksanteri Järvinen (Urjala)': {'first_name': 'Mauri (Jami)'},
 }
 
 class DjangoBackend(Backend):
