@@ -14,7 +14,7 @@ print "total updates %d" % updates.count()
 
 counter = 0
 for start in range(0, updates.count(), 50000):
-    updates_splice = list(updates[0:50000])
+    updates_splice = list(updates[start:start+50000])
     while updates_splice:
         upd = updates_splice[0]
         cand = upd.feed.candidatefeed.candidate
@@ -32,6 +32,8 @@ for start in range(0, updates.count(), 50000):
         if counter % 1000 == 0:
             print "%d updates written" % counter
             db.reset_queries()
+
+print "total written %d" % counter
 
 for p in party_dict.keys():
     pcd = party_dict[p]
