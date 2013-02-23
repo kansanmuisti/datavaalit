@@ -274,7 +274,7 @@ class FeedUpdater(object):
         self.logger.info('Processing feed %s' % unicode(feed))
 
         # First update the feed itself
-        url = '%s&fields=picture,likes,about' % feed.origin_id
+        url = '%s?fields=picture,likes,about' % feed.origin_id
         feed_info = self._fb_get(url)
         feed.picture = feed_info.get('picture', {}).get('data', {}).get('url', None)
         feed.interest = feed_info.get('likes', None)
@@ -294,7 +294,7 @@ class FeedUpdater(object):
         else:
             count = 20
         new_count = 0
-        url = '%s/posts&limit=%d%s' % (feed.origin_id, count, filter_args)
+        url = '%s/posts?limit=%d%s' % (feed.origin_id, count, filter_args)
         while True:
             self.logger.info('Fetching %s' % url)
             g = self._fb_get(url)
@@ -376,7 +376,7 @@ class FeedUpdater(object):
                 # If at least some of the updates were in our DB already,
                 # the feed is up-to-date.
                 break
-            url = "%s/posts&limit=%d&until=%d%s" % (feed.origin_id, count, until, filter_args)
+            url = "%s/posts?limit=%d&until=%d%s" % (feed.origin_id, count, until, filter_args)
         self.logger.info("%s: %d new updates" % (feed.account_name, new_count))
         feed.update_error_count = 0
         feed.last_update = datetime.datetime.now()
