@@ -1,28 +1,26 @@
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict
 import csv
 #from web.utils.ucsv import unicode_csv_reader
 import datetime
 import re
-from HTMLParser import HTMLParser
 
 from importers import Importer, register_importer
 
 # Create the necessary field mappings for different expense types
 EXPENSE_TYPES = [
-     {'type': 'total',         'index': 7},
-     {'type': 'printed_media', 'index': 8},
-     {'type': 'radio',         'index': 9},
-     {'type': 'television',    'index': 10},
-     {'type': 'web',           'index': 11},
-     {'type': 'other_media',   'index': 12},
-     {'type': 'outdoors_ads',  'index': 13},
-     {'type': 'print_ads',     'index': 14},
-     {'type': 'planning',      'index': 15},
-     {'type': 'rallies',       'index': 16},
-     {'type': 'paid_income',   'index': 17},
-     {'type': 'other',         'index': 18}
+    {'type': 'total',         'index': 7},
+    {'type': 'printed_media', 'index': 8},
+    {'type': 'radio',         'index': 9},
+    {'type': 'television',    'index': 10},
+    {'type': 'web',           'index': 11},
+    {'type': 'other_media',   'index': 12},
+    {'type': 'outdoors_ads',  'index': 13},
+    {'type': 'print_ads',     'index': 14},
+    {'type': 'planning',      'index': 15},
+    {'type': 'rallies',       'index': 16},
+    {'type': 'paid_income',   'index': 17},
+    {'type': 'other',         'index': 18}
 ]
 
 BACKLOG_URL = 'http://tmp.ypcs.fi/data/kunnallisvaalit2012/?C=M%3BO%3DD'
