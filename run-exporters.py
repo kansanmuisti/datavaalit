@@ -31,26 +31,24 @@ def init_logging(debug=False):
     return logger
 
 
-def run_export(data_type, run_only=None, **kwargs):
+def run_export(data_type, *args, **kwargs):
 
     for exp in exporter_objs:
         export_func = getattr(exp, "export_%s" % data_type, None)
-        if run_only and exp.name != run_only:
-            continue
         if export_func:
             logger.info("Running exporter '%s' for %s" % (exp.name, data_type))
-            export_func(**kwargs)
+            export_func(*args, **kwargs)
 
 usage = "usage: %prog [options] datatype"
 parser = OptionParser(usage=usage)
 parser.add_option("-l", "--list", help="list all importers", dest="list",
                   action="store_true")
 parser.add_option("-o", "--outputfile", help="name of the output file", dest="output",
-                  action="store_true")
+                  action="store")
 parser.add_option("-f", "--format", help="export format", dest="format",
                   action="store")
 parser.add_option("--overwrite", help="overwrite existing file", dest="overwrite",
-                  action="store_true")
+                  action="store_true", default=False)
 parser.add_option("-v", "--verbose", help="verbose output", dest="verbose",
                   action="store_true")
 parser.add_option("-i", "--info", help="get information on particular exporter", dest="info",
@@ -73,27 +71,29 @@ if len(args) < 1:
 elif len(args) > 1:
     logger.error("Only one datatype at a time is supported for an exporter")
 else:
+
+    if not options.output:
+        logger.error("No output filename defined for exported data")
+        sys.exit(1)
+
     DATA_TYPES = ("prebudgets", "")
 
-    datatype = args[0]
+    exp_type = args[0]
 
-    if datatype not in DATA_TYPES:
-        logger.error("Unsupported data type '%s'.\nSupported data types:\n" % datatype)
+    if exp_type not in DATA_TYPES:
+        logger.error("Unsupported data type '%s'.\nSupported data types:\n" % exp_type)
         for dt in DATA_TYPES:
             sys.stderr.write("  %s\n" % dt)
         exit(1)
 
     for exp_class in exporter_list:
-        if options.select_exporter:
-            if exp_class.name != options.select_exporter:
+        if exp_class.name != exp_type:
                 continue
         exp_obj = exp_class(logger, backend)
         exporter_objs.append(exp_obj)
     else:
-        if options.select_exporter and len(exporter_objs) == 0:
-            sys.stderr.write("Exporter '%s' not found.\n" % options.select_exporter)
+        if exp_type and len(exporter_objs) == 0:
+            sys.stderr.write("Exporter '%s' not found.\n" % exp_type)
             exit(1)
 
-    for dt in DATA_TYPES:
-        if dt in options.imports:
-            run_import(dt, run_only=options.select_importer)
+    run_export(exp_type, 'muni', 2012, options.output)
