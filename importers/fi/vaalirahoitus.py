@@ -1,28 +1,26 @@
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict
 import csv
 #from web.utils.ucsv import unicode_csv_reader
 import datetime
 import re
-from HTMLParser import HTMLParser
 
 from importers import Importer, register_importer
 
 # Create the necessary field mappings for different expense types
 EXPENSE_TYPES = [
-     {'type': 'total',         'index': 7},
-     {'type': 'printed_media', 'index': 8},
-     {'type': 'radio',         'index': 9},
-     {'type': 'television',    'index': 10},
-     {'type': 'web',           'index': 11},
-     {'type': 'other_media',   'index': 12},
-     {'type': 'outdoors_ads',  'index': 13},
-     {'type': 'print_ads',     'index': 14},
-     {'type': 'planning',      'index': 15},
-     {'type': 'rallies',       'index': 16},
-     {'type': 'paid_income',   'index': 17},
-     {'type': 'other',         'index': 18}
+    {'type': 'total',         'index': 7},
+    {'type': 'printed_media', 'index': 8},
+    {'type': 'radio',         'index': 9},
+    {'type': 'television',    'index': 10},
+    {'type': 'web',           'index': 11},
+    {'type': 'other_media',   'index': 12},
+    {'type': 'outdoors_ads',  'index': 13},
+    {'type': 'print_ads',     'index': 14},
+    {'type': 'planning',      'index': 15},
+    {'type': 'rallies',       'index': 16},
+    {'type': 'paid_income',   'index': 17},
+    {'type': 'other',         'index': 18}
 ]
 
 BACKLOG_URL = 'http://tmp.ypcs.fi/data/kunnallisvaalit2012/?C=M%3BO%3DD'
@@ -100,8 +98,11 @@ class VaalirahoitusImporter(Importer):
         election = {'type': 'muni', 'year': 2012}
         # EXPENSE_TYPES is also returned; backend may have to populate e.g. a
         # DB table with the information
-        
-        self.backend.submit_prebudgets(election, expense_types, candidates)
+
+        # FIXME: advance argument (whether the expense report is done in advance or not) can be controlled
+        # for submit_prebudgets, but it's NOT extracted from anywhere. So it has to be hard coded here 
+        # (True/False).
+        self.backend.submit_prebudgets(election, expense_types, candidates, advance=False)
 
     def import_prebudgets(self, backlog=False):
         # Construct a list of tuples, wher in each tuple the first item is the

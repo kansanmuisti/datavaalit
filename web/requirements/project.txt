@@ -14,8 +14,8 @@ cmsplugin-filer
 cmsplugin-markdown
 #django-tastypie
 git+https://github.com/toastdriven/django-tastypie.git#egg=tastypie
-requests
-requests-cache
+requests==0.14.2
+requests-cache==0.1.3
 twitter-text-py
 twython
 pyfaceb

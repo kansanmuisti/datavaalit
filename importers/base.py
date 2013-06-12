@@ -30,15 +30,15 @@ class Backend(object):
         print "Parties:"
         for p in parties:
             pprint.pprint(p)
-            
-    def submit_prebudgets(self, election, expense_types, candidates):
-        '''Expenses argument is an OrderedDict with dicts with candidate name 
+
+    def submit_prebudgets(self, election, expense_types, candidates, advance):
+        '''Expenses argument is an OrderedDict with dicts with candidate name
         as keys and detailed expenses as nested dict pairs.
-        
+     
         Example:
-            OrderedDict([('candidate_name1', {expense1 : sum1, expense2 : sum2}), 
+            OrderedDict([('candidate_name1', {expense1 : sum1, expense2 : sum2}),
                          ('candidate_name2', {expense1 : sum1, expense2 : sum2})])
-         
+
         '''
         print election
         pprint.pprint(expense_types)
