@@ -28,19 +28,19 @@ class PrebudgetExporter(Exporter):
     description = 'export candidate election prebudgets (expenses)'
     country = 'fi'
 
-
     def export_prebudgets(self, election_type, year, filename):
 
-        self.logger.debug('Fething db QuerySets')
+        self.logger.debug('Fetching db QuerySets')
         election = Election.objects.get(type=election_type, year=year)
         candidates = Candidate.objects.filter(election=election)
         budgets = CampaignBudget.objects.filter(candidate__in=candidates)
-        expenses =  CampaignExpense.objects.filter(budget__in=budgets)
+        expenses = CampaignExpense.objects.filter(budget__in=budgets)
 
         data = []
         # Append the header row
         data.append(['first_name', 'last_name', 'candidate_number',
-                     'party', 'municipality', 'expense_type', 'expense_sum'])
+                     'party', 'municipality', 'expense_type', 'expense_sum',
+                     'advance'])
 
         self.logger.debug('Building data rows')
         for expense in expenses:
@@ -56,7 +56,8 @@ class PrebudgetExporter(Exporter):
                          party.encode('utf-8'),
                          candidate.municipality.name.encode('utf-8'),
                          expense.type.name,
-                         float(expense.sum)])
+                         float(expense.sum),
+                         expense.budget.advance])
 
         try:
             self.write_csv(data, filename)

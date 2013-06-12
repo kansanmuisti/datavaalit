@@ -89,6 +89,11 @@ MATCH_TABLE = {
     'Tuula Heli Maritta Lukkari (Utsjoki)': {'first_name': 'Tuula Heli Maritta'},
     'Silja Maria Borgarsdóttir Sandelin (Helsinki)': {'first_name': 'Silja Borgarsdóttir'},
     'Mauri Selim Aleksanteri Järvinen (Urjala)': {'first_name': 'Mauri (Jami)'},
+    'Olli Pekka Vihtori Eskelinen (Mäntsälä)': {'first_name': 'Olli Pekka'},
+    'John Lars Erik Wägar (Vaasa)': {'first_name': 'Lars-Erik'},
+    'Jukka Pekka Kuokkanen (Lieto)': {'first_name': 'Jukka-Pekka'},
+    'Carl Johan Henrik Gottberg (Siuntio)': {'first_name': 'Carl-Johan'},
+    'Anna Maria Makkonen (Hankasalmi)': {'first_name': 'Anna Maria (Annukka)'}
 }
 
 class DjangoBackend(Backend):
@@ -494,7 +499,7 @@ class DjangoBackend(Backend):
 
         self.logger.info("%d candidates updated" % count)
 
-    def submit_prebudgets(self, election, expense_types, candidates):
+    def submit_prebudgets(self, election, expense_types, candidates, advance):
         election = Election.objects.get(type=election['type'], year=election['year'])
 
         self.logger.info("Backend received %s candidates" % len(candidates))
@@ -584,14 +589,14 @@ class DjangoBackend(Backend):
             
             # Get the overall prebudget
             try:
-                budget = CampaignBudget.objects.get(candidate=candidate, advance=True)
+                budget = CampaignBudget.objects.get(candidate=candidate, advance=advance)
 
                 # If there is an existing budget, use that
                 # What expenses (if any) has person got in the Expense table
                 db_expenses = list(CampaignExpense.objects.filter(budget=budget))
             except CampaignBudget.DoesNotExist:
                 # There is no previous prebudget, hence there can be no expenses
-                budget = CampaignBudget(candidate=candidate, advance=True,
+                budget = CampaignBudget(candidate=candidate, advance=advance,
                                         time_submitted=cand['timestamp'])
                 budget.save()
                 msg = "Created a new campaign budget for %s" % person_str

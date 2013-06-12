@@ -98,8 +98,11 @@ class VaalirahoitusImporter(Importer):
         election = {'type': 'muni', 'year': 2012}
         # EXPENSE_TYPES is also returned; backend may have to populate e.g. a
         # DB table with the information
-        
-        self.backend.submit_prebudgets(election, expense_types, candidates)
+
+        # FIXME: advance argument (whether the expense report is done in advance or not) can be controlled
+        # for submit_prebudgets, but it's NOT extracted from anywhere. So it has to be hard coded here 
+        # (True/False).
+        self.backend.submit_prebudgets(election, expense_types, candidates, advance=False)
 
     def import_prebudgets(self, backlog=False):
         # Construct a list of tuples, wher in each tuple the first item is the
